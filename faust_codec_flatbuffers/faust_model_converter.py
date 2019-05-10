@@ -20,7 +20,7 @@ def to_flatbuffers_schema(model: Model) -> Schema:
             raise NotImplementedError('No corresponding flatbuffers type for %s' % type_)
         field_type = _create_type(builder, flatbuffers_field_type)
         fields.append(_create_field(builder, field_name, field_type))
-    root_object = _create_object(builder, fields)
+    root_object = _create_object(builder, type(model).__name__, fields)
     schema = _create_schema(builder, root_object)
     builder.Finish(schema)
     binary_schema = bytes(builder.Output())
@@ -44,13 +44,15 @@ def _create_schema(builder: flatbuffers.Builder, root_object: Object.Object) -> 
     return Schema.SchemaEnd(builder)
 
 
-def _create_object(builder: flatbuffers.Builder, fields: Sequence[Field.Field]) -> Object.Object:
+def _create_object(builder: flatbuffers.Builder, name: str, fields: Sequence[Field.Field]) -> Object.Object:
+    name = builder.CreateString(name)
     Object.ObjectStartFieldsVector(builder, len(fields))
     for field in reversed(fields):
         builder.PrependUOffsetTRelative(field)
     fields_vector = builder.EndVector(len(fields))
 
     Object.ObjectStart(builder)
+    Object.ObjectAddName(builder, name)
     Object.ObjectAddFields(builder, fields_vector)
     return Object.ObjectEnd(builder)
 
