@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "faust-codec-flatbuffers"
+version = "0.1.0"
+description = "Faust codec that serializes models from and to Flatbuffers"
+authors = ["Michael Seifert <m.seifert@digitalernachschub.de>"]
+license = "Apache-2.0"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+flatbuffers = "^1.11"
+faust = "^1.6"
+
+[tool.poetry.dev-dependencies]
+pytest = "^4.4"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
