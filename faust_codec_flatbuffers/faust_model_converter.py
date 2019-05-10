@@ -14,12 +14,13 @@ def to_flatbuffers_schema(model: Model) -> Schema:
         raise NotImplementedError('Only Records are currently supported')
     builder = flatbuffers.Builder(1024)
     fields = []
-    for field_name, type_ in model._options.fields.items():
+    for field_index, (field_name, type_) in enumerate(model._options.fields.items()):
         flatbuffers_field_type = python_type_to_flatbuffers_type.get(type_)
         if not flatbuffers_field_type:
             raise NotImplementedError('No corresponding flatbuffers type for %s' % type_)
         field_type = _create_type(builder, flatbuffers_field_type)
-        fields.append(_create_field(builder, field_name, field_type))
+        field_offset = 4 + 2*field_index
+        fields.append(_create_field(builder, field_name, field_type, field_offset))
     root_object = _create_object(builder, type(model).__name__, fields)
     schema = _create_schema(builder, root_object)
     builder.Finish(schema)
@@ -57,11 +58,12 @@ def _create_object(builder: flatbuffers.Builder, name: str, fields: Sequence[Fie
     return Object.ObjectEnd(builder)
 
 
-def _create_field(builder: flatbuffers.Builder, name: str, type_: FieldType) -> Field.Field:
+def _create_field(builder: flatbuffers.Builder, name: str, type_: FieldType, offset: int) -> Field.Field:
     name = builder.CreateString(name)
     Field.FieldStart(builder)
     Field.FieldAddName(builder, name)
     Field.FieldAddType(builder, type_)
+    Field.FieldAddOffset(builder, offset)
     return Field.FieldEnd(builder)
 
 

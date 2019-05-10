@@ -45,3 +45,7 @@ def test_schema_corresponds_to_reference():
     assert schema.ObjectsLength() == expected_schema.ObjectsLength()
     assert schema.Objects(0).FieldsLength() == expected_schema.Objects(0).FieldsLength()
     assert schema.Objects(0).Name() == expected_schema.Objects(0).Name()
+    assert schema.Objects(0).Fields(0).Type().BaseType() == expected_schema.Objects(0).Fields(0).Type().BaseType()
+    assert schema.Objects(0).Fields(0).Name() == expected_schema.Objects(0).Fields(0).Name()
+    assert schema.Objects(0).Fields(0).Offset() == expected_schema.Objects(0).Fields(0).Offset()
+    assert schema.Objects(0).Fields(1).Offset() == expected_schema.Objects(0).Fields(1).Offset()
