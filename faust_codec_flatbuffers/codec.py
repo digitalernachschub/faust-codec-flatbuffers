@@ -13,10 +13,43 @@ from faust_codec_flatbuffers.reflection.BaseType import BaseType
 class FlatbuffersCodec(faust.Codec):
     def __init__(self, model: faust.Record):
         super().__init__()
+        self.faust_metadata = {'ns': model._options.namespace} if model._options.include_metadata else None
         self.schema = to_flatbuffers_schema(model)
 
-    def _loads(self, binary: bytes) -> Any:
-        raise NotImplementedError()
+    def _loads(self, binary: bytes) -> Mapping[str, Any]:
+        model_descriptor = self.schema.RootTable()
+        output_fields = [model_descriptor.Fields(field_index) for field_index in range(model_descriptor.FieldsLength())]
+        output_fields.sort(key=lambda field: field.Offset())
+
+        root_table_offset = flatbuffers.encode.Get(flatbuffers.packer.uoffset, binary, 0)
+        table = flatbuffers.Table(binary, root_table_offset)
+        model_data = {}
+        for field in output_fields:
+            field_name = field.Name().decode('utf-8')
+            model_data[field_name] = FlatbuffersCodec._get_field(table, field)
+        if self.faust_metadata:
+            model_data['__faust'] = self.faust_metadata
+        return model_data
+
+    @staticmethod
+    def _get_field(table: flatbuffers.Table, field: Field):
+        offset = flatbuffers.number_types.UOffsetTFlags.py_type(table.Offset(field.Offset()))
+        field_type = field.Type().BaseType()
+        if field_type == BaseType.UByte:
+            value = table.Get(flatbuffers.number_types.Uint8Flags, offset + table.Pos)
+        elif field_type == BaseType.Int:
+            value = table.Get(flatbuffers.number_types.Int32Flags, offset + table.Pos)
+        elif field_type == BaseType.UInt:
+            value = table.Get(flatbuffers.number_types.Uint32Flags, offset + table.Pos)
+        elif field_type == BaseType.ULong:
+            value = table.Get(flatbuffers.number_types.Uint64Flags, offset + table.Pos)
+        elif field_type == BaseType.String:
+            value = table.String(offset + table.Pos).decode('utf-8')
+        elif field_type == BaseType.Vector:
+            value = table.GetVectorAsNumpy(flatbuffers.number_types.Uint8Flags, offset).tobytes()
+        else:
+            raise NotImplementedError(f'Unsupported field type: {field_type}')
+        return value
 
     def _dumps(self, record: Mapping[str, Any]) -> bytes:
         return self._encode_schema(record, self.schema)

@@ -19,6 +19,21 @@ def test_dumps():
     assert binary == expected
 
 
-    binary = codec.dumps(model.to_representation())
+def test_deserialization_reverts_serialization():
+    model = Data(id='abcd', number=1234)
+    codec = FlatbuffersCodec(model)
+    data = model.to_representation()
 
-    assert model.id.encode() in binary
+    data_deserialized = codec.loads(codec.dumps(data))
+
+    assert data_deserialized == data
+
+
+def test_loads():
+    model = Data(id='abcd', number=1234)
+    codec = FlatbuffersCodec(model)
+    serialized = b'\x0c\x00\x00\x00\x08\x00\x0c\x00\x08\x00\x04\x00\x08\x00\x00\x00\xd2\x04\x00\x00\x04\x00\x00\x00\x04\x00\x00\x00abcd\x00\x00\x00\x00'
+
+    data = codec.loads(serialized)
+
+    assert data == model.to_representation()
