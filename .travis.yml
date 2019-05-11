@@ -1,0 +1,18 @@
+language: python
+cache: pip
+dist: xenial
+
+env:
+  global:
+    - PYTHONUNBUFFERED=yes
+
+matrix:
+  include:
+    - python: 3.6
+      env: TOXENV=cpython-3.6
+    - python: 3.7
+      env: TOXENV=cpython-3.7
+
+install:
+  - python -m pip install -U tox
+script: tox
