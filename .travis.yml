@@ -13,6 +13,8 @@ matrix:
     - python: 3.7
       env: TOXENV=cpython-3.7
 
+before_install:
+  - pip install poetry
 install:
   - python -m pip install -U tox
 script: tox
