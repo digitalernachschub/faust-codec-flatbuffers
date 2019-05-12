@@ -1,0 +1,5 @@
+[run]
+source=faust_codec_flatbuffers
+omit =
+    faust_codec_flatbuffers/reflection/*
+    tests/*
