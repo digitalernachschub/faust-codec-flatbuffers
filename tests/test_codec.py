@@ -2,7 +2,7 @@ import string
 from keyword import iskeyword
 
 import faust
-from hypothesis import assume, given
+from hypothesis import assume, given, settings, HealthCheck
 from hypothesis.strategies import composite, dictionaries, integers, floats, sampled_from, text
 
 from faust_codec_flatbuffers.codec import FlatbuffersCodec
@@ -60,6 +60,7 @@ def test_dumps():
     assert binary == expected
 
 
+@settings(suppress_health_check=[HealthCheck.too_slow])
 @given(model())
 def test_deserialization_reverts_serialization(model):
     codec = FlatbuffersCodec(type(model))
