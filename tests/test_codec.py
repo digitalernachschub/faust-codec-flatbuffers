@@ -21,7 +21,7 @@ _strategies_by_field_type = {
     int: integers(min_value=-2**31, max_value=2**31-1),
     UInt32: integers(min_value=0, max_value=2**32-1),
 }
-_model_fields = dictionaries(python_identifier(), sampled_from([str, int, UInt32]))
+_model_fields = dictionaries(python_identifier(), sampled_from(list(_strategies_by_field_type.keys())))
 
 
 @composite
