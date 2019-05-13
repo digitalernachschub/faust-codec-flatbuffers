@@ -3,7 +3,7 @@ from keyword import iskeyword
 
 import faust
 from hypothesis import assume, given
-from hypothesis.strategies import composite, dictionaries, sampled_from, text
+from hypothesis.strategies import composite, dictionaries, integers, sampled_from, text
 
 from faust_codec_flatbuffers.codec import FlatbuffersCodec
 
@@ -15,6 +15,10 @@ def python_identifier(draw):
     return identifier
 
 
+_strategies_by_field_type = {
+    str: text(),
+    int: integers(min_value=-2**31, max_value=2**31-1)
+}
 _model_fields = dictionaries(python_identifier(), sampled_from([str, int]))
 
 
@@ -24,7 +28,7 @@ def model(draw):
     model_type = type('Data', (faust.Record,), {'__annotations__': fields})
     model_args = {}
     for field_name, field_type in fields.items():
-        model_args[field_name] = 'abcd' if field_type == str else 1234
+        model_args[field_name] = draw(_strategies_by_field_type[field_type])
     model = model_type(**model_args)
     return model
 

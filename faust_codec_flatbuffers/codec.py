@@ -34,6 +34,8 @@ class FlatbuffersCodec(faust.Codec):
     @staticmethod
     def _get_field(table: flatbuffers.Table, field: Field):
         offset = flatbuffers.number_types.UOffsetTFlags.py_type(table.Offset(field.Offset()))
+        if offset == 0:
+            return field.DefaultInteger()
         field_type = field.Type().BaseType()
         if field_type == BaseType.UByte:
             value = table.Get(flatbuffers.number_types.Uint8Flags, offset + table.Pos)
