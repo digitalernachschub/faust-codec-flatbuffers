@@ -11,7 +11,7 @@ python_identifier = text(alphabet=string.ascii_letters, min_size=1)
 
 @composite
 def model(draw):
-    fields = {'id': str, draw(python_identifier): int}
+    fields = {draw(python_identifier): str, draw(python_identifier): int}
     model_type = type('Data', (faust.Record,), {'__annotations__': fields})
     model_args = {}
     for field_name, field_type in fields.items():
