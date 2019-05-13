@@ -13,6 +13,14 @@ class UInt32(int):
     pass
 
 
+class Int64(int):
+    pass
+
+
+class UInt64(int):
+    pass
+
+
 def to_flatbuffers_schema(model: Type[Model]) -> Schema:
     if not isinstance(model, type(Record)):
         raise NotImplementedError('Only Records are currently supported')
@@ -35,6 +43,8 @@ def to_flatbuffers_schema(model: Type[Model]) -> Schema:
 python_type_to_flatbuffers_type: Mapping[Type, BaseType] = {
     int: BaseType.Int,
     UInt32: BaseType.UInt,
+    Int64: BaseType.Long,
+    UInt64: BaseType.ULong,
     str: BaseType.String
 }
 

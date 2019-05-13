@@ -6,7 +6,7 @@ from hypothesis import assume, given
 from hypothesis.strategies import composite, dictionaries, integers, sampled_from, text
 
 from faust_codec_flatbuffers.codec import FlatbuffersCodec
-from faust_codec_flatbuffers.faust_model_converter import UInt32
+from faust_codec_flatbuffers.faust_model_converter import UInt32, Int64, UInt64
 
 
 @composite
@@ -20,6 +20,8 @@ _strategies_by_field_type = {
     str: text(),
     int: integers(min_value=-2**31, max_value=2**31-1),
     UInt32: integers(min_value=0, max_value=2**32-1),
+    Int64: integers(min_value=-2**63, max_value=2**63-1),
+    UInt64: integers(min_value=0, max_value=2**64-1),
 }
 _model_fields = dictionaries(python_identifier(), sampled_from(list(_strategies_by_field_type.keys())))
 

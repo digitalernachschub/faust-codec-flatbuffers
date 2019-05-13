@@ -43,6 +43,8 @@ class FlatbuffersCodec(faust.Codec):
             value = table.Get(flatbuffers.number_types.Int32Flags, offset + table.Pos)
         elif field_type == BaseType.UInt:
             value = table.Get(flatbuffers.number_types.Uint32Flags, offset + table.Pos)
+        elif field_type == BaseType.Long:
+            value = table.Get(flatbuffers.number_types.Int64Flags, offset + table.Pos)
         elif field_type == BaseType.ULong:
             value = table.Get(flatbuffers.number_types.Uint64Flags, offset + table.Pos)
         elif field_type == BaseType.String:
@@ -81,6 +83,10 @@ class FlatbuffersCodec(faust.Codec):
                 builder.PrependUint32Slot(slot, encoded_value, 0)
             elif field_type == BaseType.Int:
                 builder.PrependInt32Slot(slot, encoded_value, 0)
+            elif field_type == BaseType.Long:
+                builder.PrependInt64Slot(slot, encoded_value, 0)
+            elif field_type == BaseType.ULong:
+                builder.PrependUint64Slot(slot, encoded_value, 0)
             elif field_type == BaseType.String:
                 builder.PrependUOffsetTRelativeSlot(slot, flatbuffers.number_types.UOffsetTFlags.py_type(encoded_value), 0)
             elif field_type == BaseType.Vector:
@@ -93,7 +99,7 @@ class FlatbuffersCodec(faust.Codec):
 
     def _encode_field(self, builder: flatbuffers.Builder, value: Any, field: Field) -> int:
         field_type = field.Type().BaseType()
-        if field_type == BaseType.UByte or field_type == BaseType.Int or field_type == BaseType.UInt or field_type == BaseType.ULong:
+        if field_type in (BaseType.UByte, BaseType.Int, BaseType.UInt, BaseType.Long, BaseType.ULong):
             return value
         elif field_type == BaseType.String:
             return builder.CreateString(value)
