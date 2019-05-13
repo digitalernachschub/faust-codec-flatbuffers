@@ -1,6 +1,23 @@
+import string
+
 import faust
+from hypothesis import given
+from hypothesis.strategies import composite, text
 
 from faust_codec_flatbuffers.codec import FlatbuffersCodec
+
+python_identifier = text(alphabet=string.ascii_letters, min_size=1)
+
+
+@composite
+def model(draw):
+    fields = {'id': str, draw(python_identifier): int}
+    model_type = type('Data', (faust.Record,), {'__annotations__': fields})
+    model_args = {}
+    for field_name, field_type in fields.items():
+        model_args[field_name] = 'abcd' if field_type == str else 1234
+    model = model_type(**model_args)
+    return model
 
 
 class Data(faust.Record):
@@ -19,9 +36,9 @@ def test_dumps():
     assert binary == expected
 
 
-def test_deserialization_reverts_serialization():
-    model = Data(id='abcd', number=1234)
-    codec = FlatbuffersCodec(Data)
+@given(model())
+def test_deserialization_reverts_serialization(model):
+    codec = FlatbuffersCodec(type(model))
     data = model.to_representation()
 
     data_deserialized = codec.loads(codec.dumps(data))
