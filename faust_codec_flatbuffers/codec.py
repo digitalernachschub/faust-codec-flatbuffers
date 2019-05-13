@@ -12,6 +12,9 @@ from faust_codec_flatbuffers.reflection.BaseType import BaseType
 
 _number_type_by_base_type = {
     BaseType.UByte: flatbuffers.number_types.Uint8Flags,
+    BaseType.Byte: flatbuffers.number_types.Int8Flags,
+    BaseType.UShort: flatbuffers.number_types.Uint16Flags,
+    BaseType.Short: flatbuffers.number_types.Int16Flags,
     BaseType.UInt: flatbuffers.number_types.Uint32Flags,
     BaseType.Int: flatbuffers.number_types.Int32Flags,
     BaseType.ULong: flatbuffers.number_types.Uint64Flags,
@@ -92,7 +95,7 @@ class FlatbuffersCodec(faust.Codec):
 
     def _encode_field(self, builder: flatbuffers.Builder, value: Any, field: Field) -> int:
         field_type = field.Type().BaseType()
-        if field_type in (BaseType.UByte, BaseType.Int, BaseType.UInt, BaseType.Long, BaseType.ULong):
+        if field_type in _number_type_by_base_type.keys():
             return value
         elif field_type == BaseType.String:
             return builder.CreateString(value)

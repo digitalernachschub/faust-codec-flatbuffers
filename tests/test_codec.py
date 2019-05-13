@@ -6,7 +6,7 @@ from hypothesis import assume, given
 from hypothesis.strategies import composite, dictionaries, integers, sampled_from, text
 
 from faust_codec_flatbuffers.codec import FlatbuffersCodec
-from faust_codec_flatbuffers.faust_model_converter import UInt32, Int64, UInt64
+from faust_codec_flatbuffers.faust_model_converter import UInt8, Int8, UInt16, Int16, UInt32, Int64, UInt64
 
 
 @composite
@@ -18,6 +18,10 @@ def python_identifier(draw):
 
 _strategies_by_field_type = {
     str: text(),
+    UInt8: integers(min_value=0, max_value=2**8-1),
+    Int8: integers(min_value=-2**7, max_value=2**7-1),
+    UInt16: integers(min_value=0, max_value=2**16-1),
+    Int16: integers(min_value=-2**15, max_value=2**15-1),
     int: integers(min_value=-2**31, max_value=2**31-1),
     UInt32: integers(min_value=0, max_value=2**32-1),
     Int64: integers(min_value=-2**63, max_value=2**63-1),

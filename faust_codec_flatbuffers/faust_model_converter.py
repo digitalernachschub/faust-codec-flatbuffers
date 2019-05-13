@@ -9,6 +9,22 @@ from faust_codec_flatbuffers.reflection import Type as FieldType
 from faust_codec_flatbuffers.reflection.BaseType import BaseType
 
 
+class UInt8(int):
+    pass
+
+
+class Int8(int):
+    pass
+
+
+class UInt16(int):
+    pass
+
+
+class Int16(int):
+    pass
+
+
 class UInt32(int):
     pass
 
@@ -41,6 +57,10 @@ def to_flatbuffers_schema(model: Type[Model]) -> Schema:
 
 
 python_type_to_flatbuffers_type: Mapping[Type, BaseType] = {
+    UInt8: BaseType.UByte,
+    Int8: BaseType.Byte,
+    UInt16: BaseType.UShort,
+    Int16: BaseType.Short,
     int: BaseType.Int,
     UInt32: BaseType.UInt,
     Int64: BaseType.Long,
