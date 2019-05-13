@@ -1,15 +1,21 @@
 import string
+from keyword import iskeyword
 
 import faust
-from hypothesis import given
+from hypothesis import assume, given
 from hypothesis.strategies import composite, dictionaries, sampled_from, text
 
 from faust_codec_flatbuffers.codec import FlatbuffersCodec
 
-python_identifier = text(alphabet=string.ascii_letters, min_size=1)
+
+@composite
+def python_identifier(draw):
+    identifier = draw(text(alphabet=string.ascii_letters, min_size=1))
+    assume(not iskeyword(identifier))
+    return identifier
 
 
-_model_fields = dictionaries(python_identifier, sampled_from([str, int]))
+_model_fields = dictionaries(python_identifier(), sampled_from([str, int]))
 
 
 @composite
