@@ -1,4 +1,4 @@
-from typing import Any, Mapping
+from typing import Any, Mapping, Type
 
 import faust
 import flatbuffers
@@ -11,7 +11,7 @@ from faust_codec_flatbuffers.reflection.BaseType import BaseType
 
 
 class FlatbuffersCodec(faust.Codec):
-    def __init__(self, model: faust.Record):
+    def __init__(self, model: Type[faust.Record]):
         super().__init__()
         self.faust_metadata = {'ns': model._options.namespace} if model._options.include_metadata else None
         self.schema = to_flatbuffers_schema(model)

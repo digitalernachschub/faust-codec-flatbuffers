@@ -10,7 +10,7 @@ class Data(faust.Record):
 
 def test_dumps():
     model = Data(id='abcd', number=1234)
-    codec = FlatbuffersCodec(model)
+    codec = FlatbuffersCodec(Data)
     data = model.to_representation()
 
     binary = codec.dumps(data)
@@ -21,7 +21,7 @@ def test_dumps():
 
 def test_deserialization_reverts_serialization():
     model = Data(id='abcd', number=1234)
-    codec = FlatbuffersCodec(model)
+    codec = FlatbuffersCodec(Data)
     data = model.to_representation()
 
     data_deserialized = codec.loads(codec.dumps(data))
@@ -31,7 +31,7 @@ def test_deserialization_reverts_serialization():
 
 def test_loads():
     model = Data(id='abcd', number=1234)
-    codec = FlatbuffersCodec(model)
+    codec = FlatbuffersCodec(Data)
     serialized = b'\x0c\x00\x00\x00\x08\x00\x0c\x00\x08\x00\x04\x00\x08\x00\x00\x00\xd2\x04\x00\x00\x04\x00\x00\x00\x04\x00\x00\x00abcd\x00\x00\x00\x00'
 
     data = codec.loads(serialized)

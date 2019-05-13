@@ -11,7 +11,7 @@ class Data(faust.Record):
 
 
 def test_schema():
-    model = Data(id='abcd', number=1234)
+    model = Data
 
     schema = to_flatbuffers_schema(model)
 
@@ -27,7 +27,7 @@ def test_schema():
 
 
 def test_schema_corresponds_to_reference():
-    model = Data(id='abcd', number=1234)
+    model = Data
 
     schema = to_flatbuffers_schema(model)
 

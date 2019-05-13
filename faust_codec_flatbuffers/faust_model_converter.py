@@ -9,8 +9,8 @@ from faust_codec_flatbuffers.reflection import Type as FieldType
 from faust_codec_flatbuffers.reflection.BaseType import BaseType
 
 
-def to_flatbuffers_schema(model: Model) -> Schema:
-    if not isinstance(model, Record):
+def to_flatbuffers_schema(model: Type[Model]) -> Schema:
+    if not isinstance(model, type(Record)):
         raise NotImplementedError('Only Records are currently supported')
     builder = flatbuffers.Builder(1024)
     fields = []
@@ -21,7 +21,7 @@ def to_flatbuffers_schema(model: Model) -> Schema:
         field_type = _create_type(builder, flatbuffers_field_type)
         field_offset = 4 + 2*field_index
         fields.append(_create_field(builder, field_name, field_type, field_offset))
-    root_object = _create_object(builder, type(model).__name__, fields)
+    root_object = _create_object(builder, model.__name__, fields)
     schema = _create_schema(builder, root_object)
     builder.Finish(schema)
     binary_schema = bytes(builder.Output())
