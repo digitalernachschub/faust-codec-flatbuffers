@@ -2,16 +2,19 @@ import string
 
 import faust
 from hypothesis import given
-from hypothesis.strategies import composite, text
+from hypothesis.strategies import composite, dictionaries, sampled_from, text
 
 from faust_codec_flatbuffers.codec import FlatbuffersCodec
 
 python_identifier = text(alphabet=string.ascii_letters, min_size=1)
 
 
+_model_fields = dictionaries(python_identifier, sampled_from([str, int]))
+
+
 @composite
 def model(draw):
-    fields = {draw(python_identifier): str, draw(python_identifier): int}
+    fields = draw(_model_fields)
     model_type = type('Data', (faust.Record,), {'__annotations__': fields})
     model_args = {}
     for field_name, field_type in fields.items():
