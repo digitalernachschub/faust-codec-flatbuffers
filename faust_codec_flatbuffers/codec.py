@@ -10,6 +10,15 @@ from faust_codec_flatbuffers.reflection import Field
 from faust_codec_flatbuffers.reflection.BaseType import BaseType
 
 
+_number_type_by_base_type = {
+    BaseType.UByte: flatbuffers.number_types.Uint8Flags,
+    BaseType.UInt: flatbuffers.number_types.Uint32Flags,
+    BaseType.Int: flatbuffers.number_types.Int32Flags,
+    BaseType.ULong: flatbuffers.number_types.Uint64Flags,
+    BaseType.Long: flatbuffers.number_types.Int64Flags,
+}
+
+
 class FlatbuffersCodec(faust.Codec):
     def __init__(self, model: Type[faust.Record]):
         super().__init__()
@@ -37,20 +46,12 @@ class FlatbuffersCodec(faust.Codec):
         if offset == 0:
             return field.DefaultInteger()
         field_type = field.Type().BaseType()
-        if field_type == BaseType.UByte:
-            value = table.Get(flatbuffers.number_types.Uint8Flags, offset + table.Pos)
-        elif field_type == BaseType.Int:
-            value = table.Get(flatbuffers.number_types.Int32Flags, offset + table.Pos)
-        elif field_type == BaseType.UInt:
-            value = table.Get(flatbuffers.number_types.Uint32Flags, offset + table.Pos)
-        elif field_type == BaseType.Long:
-            value = table.Get(flatbuffers.number_types.Int64Flags, offset + table.Pos)
-        elif field_type == BaseType.ULong:
-            value = table.Get(flatbuffers.number_types.Uint64Flags, offset + table.Pos)
-        elif field_type == BaseType.String:
+        if field_type == BaseType.String:
             value = table.String(offset + table.Pos).decode('utf-8')
         elif field_type == BaseType.Vector:
             value = table.GetVectorAsNumpy(flatbuffers.number_types.Uint8Flags, offset).tobytes()
+        elif field_type in _number_type_by_base_type:
+            value = table.Get(_number_type_by_base_type[field_type], offset + table.Pos)
         else:
             raise NotImplementedError(f'Unsupported field type: {field_type}')
         return value
@@ -77,20 +78,12 @@ class FlatbuffersCodec(faust.Codec):
             encoded_fields.append((field_type, slot, encoded_value))
         builder.StartObject(len(input_fields))
         for field_type, slot, encoded_value in encoded_fields:
-            if field_type == BaseType.UByte:
-                builder.PrependUint8Slot(slot, encoded_value, 0)
-            elif field_type == BaseType.UInt:
-                builder.PrependUint32Slot(slot, encoded_value, 0)
-            elif field_type == BaseType.Int:
-                builder.PrependInt32Slot(slot, encoded_value, 0)
-            elif field_type == BaseType.Long:
-                builder.PrependInt64Slot(slot, encoded_value, 0)
-            elif field_type == BaseType.ULong:
-                builder.PrependUint64Slot(slot, encoded_value, 0)
-            elif field_type == BaseType.String:
+            if field_type == BaseType.String:
                 builder.PrependUOffsetTRelativeSlot(slot, flatbuffers.number_types.UOffsetTFlags.py_type(encoded_value), 0)
             elif field_type == BaseType.Vector:
                 builder.PrependUOffsetTRelativeSlot(slot, flatbuffers.number_types.UOffsetTFlags.py_type(encoded_value), 0)
+            elif field_type in _number_type_by_base_type:
+                builder.PrependSlot(_number_type_by_base_type[field_type], slot, encoded_value, 0)
             else:
                 raise NotImplementedError('Unsupported field type %s' % field_type)
         object_encoded = builder.EndObject()
