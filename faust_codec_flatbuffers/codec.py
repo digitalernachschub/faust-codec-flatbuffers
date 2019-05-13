@@ -19,6 +19,8 @@ _number_type_by_base_type = {
     BaseType.Int: flatbuffers.number_types.Int32Flags,
     BaseType.ULong: flatbuffers.number_types.Uint64Flags,
     BaseType.Long: flatbuffers.number_types.Int64Flags,
+    BaseType.Float: flatbuffers.number_types.Float32Flags,
+    BaseType.Double: flatbuffers.number_types.Float64Flags,
 }
 
 

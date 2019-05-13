@@ -3,10 +3,10 @@ from keyword import iskeyword
 
 import faust
 from hypothesis import assume, given
-from hypothesis.strategies import composite, dictionaries, integers, sampled_from, text
+from hypothesis.strategies import composite, dictionaries, integers, floats, sampled_from, text
 
 from faust_codec_flatbuffers.codec import FlatbuffersCodec
-from faust_codec_flatbuffers.faust_model_converter import UInt8, Int8, UInt16, Int16, UInt32, Int64, UInt64
+from faust_codec_flatbuffers.faust_model_converter import Float64, UInt8, Int8, UInt16, Int16, UInt32, Int64, UInt64
 
 
 @composite
@@ -26,6 +26,9 @@ _strategies_by_field_type = {
     UInt32: integers(min_value=0, max_value=2**32-1),
     Int64: integers(min_value=-2**63, max_value=2**63-1),
     UInt64: integers(min_value=0, max_value=2**64-1),
+    # NaN will break equality tests, because float('nan') != float('nan')
+    float: floats(width=32, allow_nan=False),
+    Float64: floats(allow_nan=False),
 }
 _model_fields = dictionaries(python_identifier(), sampled_from(list(_strategies_by_field_type.keys())))
 
