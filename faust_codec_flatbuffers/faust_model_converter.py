@@ -47,7 +47,7 @@ def to_flatbuffers_schema(model: Type[Model]) -> Schema:
     builder = flatbuffers.Builder(1024)
     fields = []
     for field_index, (field_name, type_) in enumerate(model._options.fields.items()):
-        flatbuffers_field_type = python_type_to_flatbuffers_type.get(type_)
+        flatbuffers_field_type = python_type_to_flatbuffers_type(type_)
         if not flatbuffers_field_type:
             raise NotImplementedError('No corresponding flatbuffers type for %s' % type_)
         field_type = _create_type(builder, flatbuffers_field_type)
@@ -60,7 +60,13 @@ def to_flatbuffers_schema(model: Type[Model]) -> Schema:
     return Schema.Schema.GetRootAsSchema(binary_schema, 0)
 
 
-python_type_to_flatbuffers_type: Mapping[Type, BaseType] = {
+def python_type_to_flatbuffers_type(type_: Type):
+    if getattr(type_, '_name', '')  == Sequence._name:
+        return BaseType.Vector
+    return _python_type_to_flatbuffers_type.get(type_)
+
+
+_python_type_to_flatbuffers_type: Mapping[Type, BaseType] = {
     UInt8: BaseType.UByte,
     Int8: BaseType.Byte,
     UInt16: BaseType.UShort,
@@ -71,7 +77,8 @@ python_type_to_flatbuffers_type: Mapping[Type, BaseType] = {
     UInt64: BaseType.ULong,
     float: BaseType.Float,
     Float64: BaseType.Double,
-    str: BaseType.String
+    str: BaseType.String,
+    bytes: BaseType.Vector,
 }
 
 
