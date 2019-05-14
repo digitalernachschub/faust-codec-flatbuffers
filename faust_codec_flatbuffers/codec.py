@@ -8,6 +8,7 @@ from faust_codec_flatbuffers.reflection import Schema
 from faust_codec_flatbuffers.reflection import Object
 from faust_codec_flatbuffers.reflection import Field
 from faust_codec_flatbuffers.reflection.BaseType import BaseType
+from faust_codec_flatbuffers.reflection.Type import Type as FieldType
 
 
 _number_type_by_base_type = {
@@ -79,7 +80,7 @@ class FlatbuffersCodec(faust.Codec):
             value = data.get(name)
             if value is None:
                 continue
-            encoded_value = self._encode_field(builder, value, field)
+            encoded_value = self._encode_value(builder, value, field.Type())
             encoded_fields.append((field_type, slot, encoded_value))
         builder.StartObject(len(input_fields))
         for field_type, slot, encoded_value in encoded_fields:
@@ -95,13 +96,16 @@ class FlatbuffersCodec(faust.Codec):
         builder.Finish(object_encoded)
         return bytes(builder.Output())
 
-    def _encode_field(self, builder: flatbuffers.Builder, value: Any, field: Field) -> int:
-        field_type = field.Type().BaseType()
-        if field_type in _number_type_by_base_type.keys():
+    def _encode_value(self, builder: flatbuffers.Builder, value: Any, type_: FieldType) -> int:
+        base_type = type_.BaseType()
+        if base_type in _number_type_by_base_type.keys():
             return value
-        elif field_type == BaseType.String:
+        elif base_type == BaseType.String:
             return builder.CreateString(value)
-        elif field_type == BaseType.Vector:
-            return builder.CreateByteVector(value)
+        elif base_type == BaseType.Vector:
+            element_type = type_.Element()
+            if element_type == BaseType.UByte:
+                return builder.CreateByteVector(value)
+            raise NotImplementedError(f'Unsupported vector type: {element_type}')
         else:
-            raise NotImplementedError(f'Unsupported field type: {field_type}')
+            raise NotImplementedError(f'Unsupported field type: {base_type}')

@@ -47,10 +47,9 @@ def to_flatbuffers_schema(model: Type[Model]) -> Schema:
     builder = flatbuffers.Builder(1024)
     fields = []
     for field_index, (field_name, type_) in enumerate(model._options.fields.items()):
-        flatbuffers_field_type = python_type_to_flatbuffers_type(type_)
-        if not flatbuffers_field_type:
+        field_type = python_type_to_flatbuffers_type(builder, type_)
+        if not field_type:
             raise NotImplementedError('No corresponding flatbuffers type for %s' % type_)
-        field_type = _create_type(builder, flatbuffers_field_type)
         field_offset = 4 + 2*field_index
         fields.append(_create_field(builder, field_name, field_type, field_offset))
     root_object = _create_object(builder, model.__name__, fields)
@@ -60,10 +59,16 @@ def to_flatbuffers_schema(model: Type[Model]) -> Schema:
     return Schema.Schema.GetRootAsSchema(binary_schema, 0)
 
 
-def python_type_to_flatbuffers_type(type_: Type):
-    if getattr(type_, '_name', '')  == Sequence._name:
-        return BaseType.Vector
-    return _python_type_to_flatbuffers_type.get(type_)
+def python_type_to_flatbuffers_type(builder: flatbuffers.Builder, type_: Type) -> FieldType:
+    element_type = None
+    if getattr(type_, '_name', '') == Sequence._name:
+        base_type = BaseType.Vector
+    elif type_ == bytes:
+        base_type = BaseType.Vector
+        element_type = BaseType.UByte
+    else:
+        base_type = _python_type_to_flatbuffers_type.get(type_)
+    return _create_type(builder, base_type, element_type=element_type)
 
 
 _python_type_to_flatbuffers_type: Mapping[Type, BaseType] = {
@@ -78,7 +83,6 @@ _python_type_to_flatbuffers_type: Mapping[Type, BaseType] = {
     float: BaseType.Float,
     Float64: BaseType.Double,
     str: BaseType.String,
-    bytes: BaseType.Vector,
 }
 
 
@@ -115,7 +119,9 @@ def _create_field(builder: flatbuffers.Builder, name: str, type_: FieldType, off
     return Field.FieldEnd(builder)
 
 
-def _create_type(builder: flatbuffers.Builder, base_type: BaseType) -> FieldType:
+def _create_type(builder: flatbuffers.Builder, base_type: BaseType, element_type: BaseType=None) -> FieldType:
     FieldType.TypeStart(builder)
     FieldType.TypeAddBaseType(builder, base_type)
+    if element_type:
+        FieldType.TypeAddElement(builder, element_type)
     return FieldType.TypeEnd(builder)
