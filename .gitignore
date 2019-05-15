@@ -1,5 +1,7 @@
+.hypothesis/
 .tox/
 __pycache__/
 dist/
 venv/
 *.egg-info/
+.coverage
