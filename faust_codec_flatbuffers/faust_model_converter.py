@@ -61,7 +61,8 @@ def to_flatbuffers_schema(model: Type[Model]) -> Schema:
 
 def python_type_to_flatbuffers_type(builder: flatbuffers.Builder, type_: Type) -> FieldType:
     element_type = None
-    if getattr(type_, '_name', '') == Sequence._name:
+    type_name = getattr(type_, '_name', str(type_))
+    if 'Sequence' in type_name:
         base_type = BaseType.Vector
         element_type = _python_type_to_flatbuffers_type[type_.__args__[0]]
     elif type_ == bytes:

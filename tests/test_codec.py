@@ -48,7 +48,8 @@ _model_fields = dictionaries(python_identifier(), _field_type)
 
 
 def _strategy_by_field_type(field_type: Type):
-    if getattr(field_type, '_name', '')  == Sequence._name:
+    type_name = getattr(field_type, '_name', str(field_type))
+    if 'Sequence' in type_name:
         element_type = field_type.__args__[0]
         if element_type == UInt8 or element_type == Int8:
             return binary()
