@@ -1,4 +1,4 @@
-from typing import Any, Mapping, Type
+from typing import Any, Collection, Mapping, Type
 
 import faust
 import flatbuffers
@@ -22,6 +22,7 @@ _number_type_by_base_type = {
     BaseType.Long: flatbuffers.number_types.Int64Flags,
     BaseType.Float: flatbuffers.number_types.Float32Flags,
     BaseType.Double: flatbuffers.number_types.Float64Flags,
+    BaseType.String: flatbuffers.number_types.UOffsetTFlags,
 }
 
 
@@ -55,7 +56,20 @@ class FlatbuffersCodec(faust.Codec):
         if field_type == BaseType.String:
             value = table.String(offset + table.Pos).decode('utf-8')
         elif field_type == BaseType.Vector:
-            value = table.GetVectorAsNumpy(flatbuffers.number_types.Uint8Flags, offset).tobytes()
+            element_type = field.Type().Element()
+            if element_type == BaseType.UByte or element_type == BaseType.Byte:
+                value = table.GetVectorAsNumpy(flatbuffers.number_types.Uint8Flags, offset).tobytes()
+            else:
+                vector_offset = table.Vector(offset)
+                element_count = table.VectorLen(offset)
+                element_size = _number_type_by_base_type[element_type].bytewidth
+                value = []
+                for index in range(element_count):
+                    element_offset = vector_offset+index*element_size
+                    if element_type == BaseType.String:
+                        value.append(table.String(element_offset).decode('utf-8'))
+                    else:
+                        value.append(table.Get(_number_type_by_base_type[element_type], element_offset))
         elif field_type in _number_type_by_base_type:
             value = table.Get(_number_type_by_base_type[field_type], offset + table.Pos)
         else:
@@ -80,7 +94,7 @@ class FlatbuffersCodec(faust.Codec):
             value = data.get(name)
             if value is None:
                 continue
-            encoded_value = self._encode_value(builder, value, field.Type())
+            encoded_value = self._encode_field(builder, value, field.Type())
             encoded_fields.append((field_type, slot, encoded_value))
         builder.StartObject(len(input_fields))
         for field_type, slot, encoded_value in encoded_fields:
@@ -96,16 +110,29 @@ class FlatbuffersCodec(faust.Codec):
         builder.Finish(object_encoded)
         return bytes(builder.Output())
 
-    def _encode_value(self, builder: flatbuffers.Builder, value: Any, type_: FieldType) -> int:
+    def _encode_field(self, builder: flatbuffers.Builder, value: Any, type_: FieldType) -> int:
         base_type = type_.BaseType()
-        if base_type in _number_type_by_base_type.keys():
-            return value
-        elif base_type == BaseType.String:
+        if base_type == BaseType.Vector:
+            return self._encode_vector(builder, value, element_type=type_.Element())
+        return self._encode_value(builder, value, base_type)
+
+    def _encode_value(self, builder: flatbuffers.Builder, value: Any, type_: BaseType) -> int:
+        if type_ == BaseType.String:
             return builder.CreateString(value)
-        elif base_type == BaseType.Vector:
-            element_type = type_.Element()
-            if element_type == BaseType.UByte:
-                return builder.CreateByteVector(value)
-            raise NotImplementedError(f'Unsupported vector type: {element_type}')
-        else:
-            raise NotImplementedError(f'Unsupported field type: {base_type}')
+        elif type_ in _number_type_by_base_type.keys():
+            return value
+        raise NotImplementedError(f'Unsupported field type: {type_}')
+
+    def _encode_vector(self, builder: flatbuffers.Builder, value: Collection, element_type: BaseType) -> int:
+        if element_type == BaseType.UByte or element_type == BaseType.Byte:
+            return builder.CreateByteVector(value)
+        elements_encoded = [self._encode_value(builder, element, element_type) for element in value]
+        element_bytesize = _number_type_by_base_type[element_type].bytewidth
+        vector_element_type = _number_type_by_base_type[element_type]
+        builder.StartVector(element_bytesize, len(elements_encoded), element_bytesize)
+        for index, element in enumerate(reversed(elements_encoded)):
+            if vector_element_type == flatbuffers.number_types.UOffsetTFlags:
+                builder.PrependUOffsetTRelative(element)
+            else:
+                builder.Prepend(_number_type_by_base_type[element_type], element)
+        return builder.EndVector(len(elements_encoded))

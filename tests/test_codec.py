@@ -3,8 +3,8 @@ from keyword import iskeyword
 from typing import Sequence, Type
 
 import faust
-from hypothesis import assume, given, settings, HealthCheck
-from hypothesis.strategies import binary, composite, dictionaries, floats, integers, lists, sampled_from, text
+from hypothesis import assume, given, settings, HealthCheck, reproduce_failure
+from hypothesis.strategies import binary, composite, dictionaries, floats, integers, just, lists, sampled_from, text
 
 from faust_codec_flatbuffers.codec import FlatbuffersCodec
 from faust_codec_flatbuffers.faust_model_converter import Float64, UInt8, Int8, UInt16, Int16, UInt32, Int64, UInt64
@@ -30,18 +30,31 @@ _strategies_by_field_type = {
     # NaN will break equality tests, because float('nan') != float('nan')
     float: floats(width=32, allow_nan=False),
     Float64: floats(allow_nan=False),
-    bytes: binary()
 }
 
 
 _scalar_field_type = sampled_from(list(_strategies_by_field_type.keys()))
-_field_type = _scalar_field_type
+
+
+@composite
+def _container_field_type(draw):
+    container_type = draw(sampled_from([Sequence]))
+    element_type = draw(_scalar_field_type)
+    return container_type[element_type]
+
+
+_field_type = _scalar_field_type | just(bytes) | _container_field_type()
 _model_fields = dictionaries(python_identifier(), _field_type)
 
 
 def _strategy_by_field_type(field_type: Type):
     if getattr(field_type, '_name', '')  == Sequence._name:
-        return lists(_strategy_by_field_type(field_type.__args__[0]))
+        element_type = field_type.__args__[0]
+        if element_type == UInt8 or element_type == Int8:
+            return binary()
+        return lists(_strategy_by_field_type(element_type))
+    elif field_type == bytes:
+        return binary()
     return _strategies_by_field_type[field_type]
 
 

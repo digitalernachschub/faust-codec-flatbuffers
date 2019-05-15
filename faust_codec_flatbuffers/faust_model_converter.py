@@ -63,6 +63,7 @@ def python_type_to_flatbuffers_type(builder: flatbuffers.Builder, type_: Type) -
     element_type = None
     if getattr(type_, '_name', '') == Sequence._name:
         base_type = BaseType.Vector
+        element_type = _python_type_to_flatbuffers_type[type_.__args__[0]]
     elif type_ == bytes:
         base_type = BaseType.Vector
         element_type = BaseType.UByte
