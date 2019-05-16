@@ -1,6 +1,7 @@
 import string
 import subprocess
 import tempfile
+import types
 from keyword import iskeyword
 from pathlib import Path
 from typing import Sequence, Type
@@ -67,15 +68,20 @@ def model_field(draw, name=python_identifier(), type_=_field_type):
 
 
 @composite
-def model_type(draw, fields=lists(model_field())):
+def model_type(draw, fields=lists(model_field()), include_metadata=just(True)):
     fields = {name: type_ for name, type_ in draw(fields)}
-    model_type = type('Data', (faust.Record,), {'__annotations__': fields})
+    model_type = types.new_class(
+        'Data',
+        bases=(faust.Record,),
+        kwds={'include_metadata': draw(include_metadata)},
+        exec_body=lambda class_vars: class_vars.update({'__annotations__': fields})
+    )
     return model_type
 
 
 @composite
-def model(draw, fields=lists(model_field())):
-    type_ = draw(model_type(fields=fields))
+def model(draw, **kwargs):
+    type_ = draw(model_type(**kwargs))
     model_args = {}
     for field_name, field_type in type_._options.fields.items():
         model_args[field_name] = draw(_strategy_by_field_type(field_type))
@@ -106,7 +112,8 @@ class Data(faust.Record, include_metadata=False):
     fields=just([
         ('id', str),
         ('number', int)
-    ])
+    ]),
+    include_metadata=just(False)
 ))
 def test_deserialization_reverts_serialization_when_codec_is_created_from_schema(model):
     schema_definition = '''
@@ -117,7 +124,6 @@ def test_deserialization_reverts_serialization_when_codec_is_created_from_schema
         root_type Data;'''
     schema = _create_schema(schema_definition)
     codec = FlatbuffersCodec.from_schema(schema)
-    model._options.include_metadata = False
     data = model.to_representation()
 
     data_deserialized = codec.loads(codec.dumps(data))
