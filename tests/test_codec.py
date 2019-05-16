@@ -62,8 +62,15 @@ def _strategy_by_field_type(field_type: Type):
 
 
 @composite
+def model_field(draw):
+    name = draw(python_identifier())
+    type_ = draw(_field_type)
+    return name, type_
+
+
+@composite
 def model_type(draw):
-    fields = draw(dictionaries(python_identifier(), _field_type))
+    fields = {name: type_ for name, type_ in draw(lists(model_field()))}
     model_type = type('Data', (faust.Record,), {'__annotations__': fields})
     return model_type
 
