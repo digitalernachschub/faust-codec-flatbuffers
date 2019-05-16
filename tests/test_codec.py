@@ -104,6 +104,24 @@ def _to_binary_schema(definition: str) -> bytes:
             return f.read()
 
 
+def _reference_serialize(definition: str, data: Mapping[str, Any]) -> bytes:
+    with tempfile.TemporaryDirectory() as output_dir:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.fbs') as schema_definition_file:
+            schema_definition_file.write(definition)
+            schema_definition_file.flush()
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as data_file:
+                json.dump(data, data_file)
+                data_file.flush()
+                subprocess.run(['flatc', '--binary', '--raw-binary',
+                                '-o', output_dir, schema_definition_file.name, data_file.name], check=True)
+        serialized_data_files = list(Path(output_dir).glob('**/*.bin'))
+        if len(serialized_data_files) > 1:
+            serialized_data_paths = [str(f) for f in serialized_data_files]
+            raise ValueError('More than one Flatbuffers file found: ' + ', '.join(serialized_data_paths))
+        with open(str(serialized_data_files[0]), 'rb') as f:
+            return f.read()
+
+
 def _reference_deserialize(definition: str, data: bytes) -> Mapping[str, Any]:
     with tempfile.TemporaryDirectory() as output_dir:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.fbs') as schema_definition_file:
@@ -222,11 +240,16 @@ def test_deserialization_reverts_serialization(model):
     assert data_deserialized == data
 
 
-def test_loads():
-    model = Data(id='abcd', number=1234)
-    codec = FlatbuffersCodec.from_model(Data)
-    serialized = b'\x0c\x00\x00\x00\x08\x00\x0c\x00\x08\x00\x04\x00\x08\x00\x00\x00\xd2\x04\x00\x00\x04\x00\x00\x00\x04\x00\x00\x00abcd\x00\x00\x00\x00'
+@given(data())
+def test_loads(data):
+    table_ = data.draw(table())
+    schema_definition = _to_schema_definition(table_)
+    model_type = _to_faust_model_type(table_)
+    model_instance = data.draw(model(model_class=just(model_type)))
+    codec = FlatbuffersCodec.from_model(model_type)
+    data_json = model_instance.to_representation()
+    serialized = _reference_serialize(schema_definition, data_json)
 
-    data = codec.loads(serialized)
+    data_deserialized = codec.loads(serialized)
 
-    assert data == model.to_representation()
+    assert data_deserialized == data_json
