@@ -140,10 +140,11 @@ def field(draw):
 
 @composite
 def table(draw, name=text(alphabet=string.ascii_letters, min_size=1)):
-    return Table(
-        name=draw(name),
-        fields=draw(lists(field(), unique_by=lambda f: f.name)),
-    )
+    name_ = draw(name)
+    fields_ = draw(lists(field(), unique_by=lambda f: f.name))
+    # Fields with the same name as the table are not allowed
+    assume(all(f.name != name_ for f in fields_))
+    return Table(name=name_, fields=fields_)
 
 
 _model_field_type_by_flatbuffers_type = {
