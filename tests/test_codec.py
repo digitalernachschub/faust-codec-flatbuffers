@@ -108,7 +108,7 @@ class Data(faust.Record, include_metadata=False):
         ('number', int)
     ])
 ))
-def test_create_schema(model):
+def test_deserialization_reverts_serialization_when_codec_is_created_from_schema(model):
     schema_definition = '''
         table Data {
             id:string;
