@@ -27,15 +27,19 @@ _number_type_by_base_type = {
 
 
 class FlatbuffersCodec(faust.Codec):
-    def __init__(self, model_or_schema: Union[bytes, Type[faust.Record]]):
+    @staticmethod
+    def from_model(model: Type[faust.Record]):
+        metadata = {'ns': model._options.namespace} if model._options.include_metadata else None
+        return FlatbuffersCodec(to_flatbuffers_schema(model), metadata=metadata)
+
+    @staticmethod
+    def from_schema(schema: bytes):
+        return FlatbuffersCodec(Schema.Schema.GetRootAsSchema(schema, 0))
+
+    def __init__(self, schema: Schema.Schema, metadata: Mapping=None):
         super().__init__()
-        self.faust_metadata = None
-        try:
-            self.schema = to_flatbuffers_schema(model_or_schema)
-            if model_or_schema._options.include_metadata:
-                self.faust_metadata = {'ns': model_or_schema._options.namespace}
-        except:
-            self.schema = Schema.Schema.GetRootAsSchema(model_or_schema, 0)
+        self.faust_metadata = metadata
+        self.schema = schema
 
     def _loads(self, binary: bytes) -> Mapping[str, Any]:
         model_descriptor = self.schema.RootTable()

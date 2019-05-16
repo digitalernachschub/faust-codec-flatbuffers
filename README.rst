@@ -18,7 +18,7 @@ Usage
       x: int
       y: int
 
-  faust.serializers.codecs.register('point', FlatbuffersCodec(Point))
+  faust.serializers.codecs.register('point', FlatbuffersCodec.from_model(Point))
 
 
 .. |build-status| image:: https://secure.travis-ci.org/digitalernachschub/faust-codec-flatbuffers.png

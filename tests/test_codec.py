@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Sequence, Type
 
 import faust
-from hypothesis import assume, given, settings, HealthCheck, reproduce_failure
+from hypothesis import assume, given, settings, HealthCheck
 from hypothesis.strategies import binary, composite, dictionaries, floats, integers, just, lists, sampled_from, text
 
 from faust_codec_flatbuffers.codec import FlatbuffersCodec
@@ -100,7 +100,7 @@ def test_create_schema():
         }
         root_type Data;'''
     schema = _create_schema(schema_definition)
-    codec = FlatbuffersCodec(schema)
+    codec = FlatbuffersCodec.from_schema(schema)
     model = Data(id='abcd', number=1234)
     data = model.to_representation()
 
@@ -111,7 +111,7 @@ def test_create_schema():
 
 def test_dumps():
     model = Data(id='abcd', number=1234)
-    codec = FlatbuffersCodec(Data)
+    codec = FlatbuffersCodec.from_model(Data)
     data = model.to_representation()
 
     binary = codec.dumps(data)
@@ -123,7 +123,7 @@ def test_dumps():
 @settings(suppress_health_check=[HealthCheck.too_slow])
 @given(model())
 def test_deserialization_reverts_serialization(model):
-    codec = FlatbuffersCodec(type(model))
+    codec = FlatbuffersCodec.from_model(type(model))
     data = model.to_representation()
 
     data_deserialized = codec.loads(codec.dumps(data))
@@ -133,7 +133,7 @@ def test_deserialization_reverts_serialization(model):
 
 def test_loads():
     model = Data(id='abcd', number=1234)
-    codec = FlatbuffersCodec(Data)
+    codec = FlatbuffersCodec.from_model(Data)
     serialized = b'\x0c\x00\x00\x00\x08\x00\x0c\x00\x08\x00\x04\x00\x08\x00\x00\x00\xd2\x04\x00\x00\x04\x00\x00\x00\x04\x00\x00\x00abcd\x00\x00\x00\x00'
 
     data = codec.loads(serialized)
