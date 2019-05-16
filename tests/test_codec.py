@@ -142,10 +142,7 @@ class Data(faust.Record, include_metadata=False):
 @settings(suppress_health_check=[HealthCheck.too_slow])
 @given(data())
 def test_deserialization_reverts_serialization_when_codec_is_created_from_schema(data):
-    field0 = data.draw(field())
-    field1 = data.draw(field())
-    assume(field1['name'] != field0['name'])
-    fields = [field0, field1]
+    fields = data.draw(lists(field(), unique_by=lambda f: f['name']))
     schema_definition = 'table Data {'
     for f in fields:
         schema_definition += f'{f["name"]}:{f["type"]};\n'
