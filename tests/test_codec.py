@@ -7,7 +7,7 @@ from typing import Sequence, Type
 
 import faust
 from hypothesis import assume, given, settings, HealthCheck
-from hypothesis.strategies import binary, composite, dictionaries, floats, integers, just, lists, sampled_from, text
+from hypothesis.strategies import binary, composite, floats, integers, just, lists, sampled_from, text
 
 from faust_codec_flatbuffers.codec import FlatbuffersCodec
 from faust_codec_flatbuffers.faust_model_converter import Float64, UInt8, Int8, UInt16, Int16, UInt32, Int64, UInt64
@@ -62,22 +62,20 @@ def _strategy_by_field_type(field_type: Type):
 
 
 @composite
-def model_field(draw):
-    name = draw(python_identifier())
-    type_ = draw(_field_type)
-    return name, type_
+def model_field(draw, name=python_identifier(), type_=_field_type):
+    return draw(name), draw(type_)
 
 
 @composite
-def model_type(draw):
-    fields = {name: type_ for name, type_ in draw(lists(model_field()))}
+def model_type(draw, fields=lists(model_field())):
+    fields = {name: type_ for name, type_ in draw(fields)}
     model_type = type('Data', (faust.Record,), {'__annotations__': fields})
     return model_type
 
 
 @composite
-def model(draw):
-    type_ = draw(model_type())
+def model(draw, fields=lists(model_field())):
+    type_ = draw(model_type(fields=fields))
     model_args = {}
     for field_name, field_type in type_._options.fields.items():
         model_args[field_name] = draw(_strategy_by_field_type(field_type))
