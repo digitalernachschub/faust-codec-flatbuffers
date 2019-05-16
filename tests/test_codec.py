@@ -1,5 +1,8 @@
 import string
+import subprocess
+import tempfile
 from keyword import iskeyword
+from pathlib import Path
 from typing import Sequence, Type
 
 import faust
@@ -70,9 +73,40 @@ def model(draw):
     return model
 
 
-class Data(faust.Record):
+def _create_schema(definition: str) -> bytes:
+    with tempfile.TemporaryDirectory() as output_dir:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.fbs') as schema_definition_file:
+            schema_definition_file.write(definition)
+            schema_definition_file.flush()
+            subprocess.run(['flatc', '--schema', '--binary', '-o', output_dir, schema_definition_file.name], check=True)
+        binary_schema_files = list(Path(output_dir).glob('**/*.bfbs'))
+        if len(binary_schema_files) > 1:
+            binary_schema_paths = [str(f) for f in binary_schema_files]
+            raise ValueError('More than one Flatbuffers binary schema found: ' + ', '.join(binary_schema_paths))
+        with open(str(binary_schema_files[0]), 'rb') as f:
+            return f.read()
+
+
+class Data(faust.Record, include_metadata=False):
     id: str
     number: int
+
+
+def test_create_schema():
+    schema_definition = '''
+        table Data {
+            id:string;
+            number:int;
+        }
+        root_type Data;'''
+    schema = _create_schema(schema_definition)
+    codec = FlatbuffersCodec(schema)
+    model = Data(id='abcd', number=1234)
+    data = model.to_representation()
+
+    data_deserialized = codec.loads(codec.dumps(data))
+
+    assert data_deserialized == data
 
 
 def test_dumps():

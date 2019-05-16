@@ -1,4 +1,4 @@
-from typing import Any, Collection, Mapping, Type
+from typing import Any, Collection, Mapping, Type, Union
 
 import faust
 import flatbuffers
@@ -27,10 +27,15 @@ _number_type_by_base_type = {
 
 
 class FlatbuffersCodec(faust.Codec):
-    def __init__(self, model: Type[faust.Record]):
+    def __init__(self, model_or_schema: Union[bytes, Type[faust.Record]]):
         super().__init__()
-        self.faust_metadata = {'ns': model._options.namespace} if model._options.include_metadata else None
-        self.schema = to_flatbuffers_schema(model)
+        self.faust_metadata = None
+        try:
+            self.schema = to_flatbuffers_schema(model_or_schema)
+            if model_or_schema._options.include_metadata:
+                self.faust_metadata = {'ns': model_or_schema._options.namespace}
+        except:
+            self.schema = Schema.Schema.GetRootAsSchema(model_or_schema, 0)
 
     def _loads(self, binary: bytes) -> Mapping[str, Any]:
         model_descriptor = self.schema.RootTable()
