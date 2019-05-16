@@ -126,11 +126,24 @@ class Field(NamedTuple):
     type: Type
 
 
+class Table(NamedTuple):
+    name: str
+    fields: Sequence[Field]
+
+
 @composite
 def field(draw):
     name = draw(text(alphabet=string.ascii_letters, min_size=1))
     type_ = draw(sampled_from(['string', 'int']))
     return Field(name=name, type=type_)
+
+
+@composite
+def table(draw, name=text(alphabet=string.ascii_letters, min_size=1)):
+    return Table(
+        name=draw(name),
+        fields=draw(lists(field(), unique_by=lambda f: f.name)),
+    )
 
 
 _model_field_type_by_flatbuffers_type = {
@@ -147,14 +160,14 @@ class Data(faust.Record, include_metadata=False):
 @settings(suppress_health_check=[HealthCheck.too_slow])
 @given(data())
 def test_deserialization_reverts_serialization_when_codec_is_created_from_schema(data):
-    fields = data.draw(lists(field(), unique_by=lambda f: f.name))
+    table_ = data.draw(table(name=just('Data')))
     schema_definition = 'table Data {'
-    for f in fields:
+    for f in table_.fields:
         schema_definition += f'{f.name}:{f.type};\n'
     schema_definition += '}\n'
     schema_definition += 'root_type Data;'
 
-    model_fields = [(f.name, _model_field_type_by_flatbuffers_type[f.type]) for f in fields]
+    model_fields = [(f.name, _model_field_type_by_flatbuffers_type[f.type]) for f in table_.fields]
     model_instance = data.draw(model(
         fields=just(model_fields),
         include_metadata=just(False)
