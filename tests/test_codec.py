@@ -33,8 +33,10 @@ _strategies_by_field_type = {
     Int64: integers(min_value=-2**63, max_value=2**63-1),
     UInt64: integers(min_value=0, max_value=2**64-1),
     # NaN will break equality tests, because float('nan') != float('nan')
-    float: floats(width=32, allow_nan=False),
-    Float64: floats(allow_nan=False),
+    # Infinity will break test_dumps and test_loads, because they feed flatc with json-encoded data and JSON
+    # doest not support NaN or Infinity values.
+    float: floats(width=32, allow_nan=False, allow_infinity=False),
+    Float64: floats(allow_nan=False, allow_infinity=False),
 }
 
 
@@ -153,7 +155,7 @@ class Table(NamedTuple):
 @composite
 def field(draw):
     name = draw(python_identifier())
-    type_ = draw(sampled_from(['string', 'int']))
+    type_ = draw(sampled_from(list(_model_field_type_by_flatbuffers_type.keys())))
     return Field(name=name, type=type_)
 
 
@@ -168,7 +170,26 @@ def table(draw, name=python_identifier()):
 
 _model_field_type_by_flatbuffers_type = {
     'string': str,
+    'byte': Int8,
+    'ubyte': UInt8,
+    'short': Int16,
+    'ushort': UInt16,
     'int': int,
+    'uint': UInt32,
+    'long': Int64,
+    'ulong': UInt64,
+    'int8': Int8,
+    'uint8': UInt8,
+    'int16': Int16,
+    'uint16': UInt16,
+    'int32': int,
+    'uint32': UInt32,
+    'int64': Int64,
+    'uint64': UInt64,
+    'float': float,
+    'float32': float,
+    'float64': Float64,
+    'double': Float64,
 }
 
 
