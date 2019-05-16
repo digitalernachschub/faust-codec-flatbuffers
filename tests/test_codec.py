@@ -81,8 +81,8 @@ def model_type(draw, fields=lists(model_field()), include_metadata=just(True)):
 
 
 @composite
-def model(draw, **kwargs):
-    type_ = draw(model_type(**kwargs))
+def model(draw, model_class=model_type()):
+    type_ = draw(model_class)
     model_args = {}
     for field_name, field_type in type_._options.fields.items():
         model_args[field_name] = draw(_strategy_by_field_type(field_type))
@@ -161,6 +161,17 @@ def _to_schema_definition(table: Table) -> str:
     return schema_definition
 
 
+def _to_faust_model_type(table: Table) -> Type:
+    fields = {f.name: _model_field_type_by_flatbuffers_type[f.type] for f in table.fields}
+    model_type = types.new_class(
+        table.name,
+        bases=(faust.Record,),
+        kwds={'include_metadata': False},
+        exec_body=lambda class_vars: class_vars.update({'__annotations__': fields})
+    )
+    return model_type
+
+
 class Data(faust.Record, include_metadata=False):
     id: str
     number: int
@@ -172,11 +183,8 @@ def test_deserialization_reverts_serialization_when_codec_is_created_from_schema
     table_ = data.draw(table(name=just('Data')))
     schema_definition = _to_schema_definition(table_)
 
-    model_fields = [(f.name, _model_field_type_by_flatbuffers_type[f.type]) for f in table_.fields]
-    model_instance = data.draw(model(
-        fields=just(model_fields),
-        include_metadata=just(False)
-    ))
+    model_type = _to_faust_model_type(table_)
+    model_instance = data.draw(model(model_class=just(model_type)))
     schema = _to_binary_schema(schema_definition)
     codec = FlatbuffersCodec.from_schema(schema)
     data = model_instance.to_representation()
