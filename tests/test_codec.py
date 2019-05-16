@@ -112,7 +112,8 @@ def _reference_deserialize(definition: str, data: bytes) -> Mapping[str, Any]:
             with tempfile.NamedTemporaryFile(mode='wb', suffix='.bin') as data_file:
                 data_file.write(data)
                 data_file.flush()
-                subprocess.run(['flatc', '--json', '--strict-json', '--raw-binary', '-o', output_dir, schema_definition_file.name, '--', data_file.name], check=True)
+                subprocess.run(['flatc', '--json', '--strict-json', '--defaults-json', '--raw-binary',
+                                '-o', output_dir, schema_definition_file.name, '--', data_file.name], check=True)
         deserialized_data_files = list(Path(output_dir).glob('**/*.json'))
         if len(deserialized_data_files) > 1:
             deserialized_data_paths = [str(f) for f in deserialized_data_files]
@@ -195,21 +196,19 @@ def test_deserialization_reverts_serialization_when_codec_is_created_from_schema
     assert data_deserialized == data
 
 
-def test_dumps():
-    schema_definition = '''
-        table Data {
-            id:string;
-            number:int;
-        }
-        root_type Data;'''
-    model = Data(id='abcd', number=1234)
-    codec = FlatbuffersCodec.from_model(Data)
-    data = model.to_representation()
+@given(data())
+def test_dumps(data):
+    table_ = data.draw(table())
+    schema_definition = _to_schema_definition(table_)
+    model_type = _to_faust_model_type(table_)
+    model_instance = data.draw(model(model_class=just(model_type)))
+    codec = FlatbuffersCodec.from_model(model_type)
+    data_json = model_instance.to_representation()
 
-    binary = codec.dumps(data)
+    binary = codec.dumps(data_json)
 
     deserialized = _reference_deserialize(schema_definition, binary)
-    assert deserialized == data
+    assert deserialized == data_json
 
 
 @settings(suppress_health_check=[HealthCheck.too_slow])
