@@ -9,7 +9,7 @@ from typing import Any, Mapping, Sequence, Type
 
 import faust
 from hypothesis import assume, given, settings, HealthCheck
-from hypothesis.strategies import binary, composite, floats, integers, just, lists, sampled_from, text
+from hypothesis.strategies import binary, composite, data, floats, integers, just, lists, sampled_from, text
 
 from faust_codec_flatbuffers.codec import FlatbuffersCodec
 from faust_codec_flatbuffers.faust_model_converter import Float64, UInt8, Int8, UInt16, Int16, UInt32, Int64, UInt64
@@ -121,28 +121,45 @@ def _reference_deserialize(definition: str, data: bytes) -> Mapping[str, Any]:
             return json.load(f)
 
 
+@composite
+def field(draw):
+    name = draw(text(alphabet=string.ascii_letters, min_size=1))
+    type_ = draw(sampled_from(['string', 'int']))
+    return dict(name=name, type=type_)
+
+
+_model_field_type_by_flatbuffers_type = {
+    'string': str,
+    'int': int,
+}
+
+
 class Data(faust.Record, include_metadata=False):
     id: str
     number: int
 
 
-@given(model(
-    fields=just([
-        ('id', str),
-        ('number', int)
-    ]),
-    include_metadata=just(False)
-))
-def test_deserialization_reverts_serialization_when_codec_is_created_from_schema(model):
-    schema_definition = '''
-        table Data {
-            id:string;
-            number:int;
-        }
-        root_type Data;'''
+@settings(suppress_health_check=[HealthCheck.too_slow])
+@given(data())
+def test_deserialization_reverts_serialization_when_codec_is_created_from_schema(data):
+    field0 = data.draw(field())
+    field1 = data.draw(field())
+    assume(field1['name'] != field0['name'])
+    fields = [field0, field1]
+    schema_definition = 'table Data {'
+    for f in fields:
+        schema_definition += f'{f["name"]}:{f["type"]};\n'
+    schema_definition += '}\n'
+    schema_definition += 'root_type Data;'
+
+    model_fields = [(field['name'], _model_field_type_by_flatbuffers_type[field['type']]) for field in fields]
+    model_instance = data.draw(model(
+        fields=just(model_fields),
+        include_metadata=just(False)
+    ))
     schema = _to_binary_schema(schema_definition)
     codec = FlatbuffersCodec.from_schema(schema)
-    data = model.to_representation()
+    data = model_instance.to_representation()
 
     data_deserialized = codec.loads(codec.dumps(data))
 
