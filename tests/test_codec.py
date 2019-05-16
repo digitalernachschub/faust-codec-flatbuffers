@@ -1,10 +1,11 @@
+import json
 import string
 import subprocess
 import tempfile
 import types
 from keyword import iskeyword
 from pathlib import Path
-from typing import Sequence, Type
+from typing import Any, Mapping, Sequence, Type
 
 import faust
 from hypothesis import assume, given, settings, HealthCheck
@@ -103,6 +104,23 @@ def _create_schema(definition: str) -> bytes:
             return f.read()
 
 
+def _reference_deserialize(definition: str, data: bytes) -> Mapping[str, Any]:
+    with tempfile.TemporaryDirectory() as output_dir:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.fbs') as schema_definition_file:
+            schema_definition_file.write(definition)
+            schema_definition_file.flush()
+            with tempfile.NamedTemporaryFile(mode='wb', suffix='.bin') as data_file:
+                data_file.write(data)
+                data_file.flush()
+                subprocess.run(['flatc', '--json', '--strict-json', '--raw-binary', '-o', output_dir, schema_definition_file.name, '--', data_file.name], check=True)
+        deserialized_data_files = list(Path(output_dir).glob('**/*.json'))
+        if len(deserialized_data_files) > 1:
+            deserialized_data_paths = [str(f) for f in deserialized_data_files]
+            raise ValueError('More than one Flatbuffers file found: ' + ', '.join(deserialized_data_paths))
+        with open(str(deserialized_data_files[0]), 'r') as f:
+            return json.load(f)
+
+
 class Data(faust.Record, include_metadata=False):
     id: str
     number: int
@@ -132,14 +150,20 @@ def test_deserialization_reverts_serialization_when_codec_is_created_from_schema
 
 
 def test_dumps():
+    schema_definition = '''
+        table Data {
+            id:string;
+            number:int;
+        }
+        root_type Data;'''
     model = Data(id='abcd', number=1234)
     codec = FlatbuffersCodec.from_model(Data)
     data = model.to_representation()
 
     binary = codec.dumps(data)
 
-    expected = b'\x0c\x00\x00\x00\x08\x00\x0c\x00\x08\x00\x04\x00\x08\x00\x00\x00\xd2\x04\x00\x00\x04\x00\x00\x00\x04\x00\x00\x00abcd\x00\x00\x00\x00'
-    assert binary == expected
+    deserialized = _reference_deserialize(schema_definition, binary)
+    assert deserialized == data
 
 
 @settings(suppress_health_check=[HealthCheck.too_slow])
