@@ -152,13 +152,13 @@ class Table(NamedTuple):
 
 @composite
 def field(draw):
-    name = draw(text(alphabet=string.ascii_letters, min_size=1))
+    name = draw(python_identifier())
     type_ = draw(sampled_from(['string', 'int']))
     return Field(name=name, type=type_)
 
 
 @composite
-def table(draw, name=text(alphabet=string.ascii_letters, min_size=1)):
+def table(draw, name=python_identifier()):
     name_ = draw(name)
     fields_ = draw(lists(field(), unique_by=lambda f: f.name))
     # Fields with the same name as the table are not allowed
