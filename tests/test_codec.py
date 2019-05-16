@@ -47,7 +47,6 @@ def _container_field_type(draw):
 
 
 _field_type = _scalar_field_type | just(bytes) | _container_field_type()
-_model_fields = dictionaries(python_identifier(), _field_type)
 
 
 def _strategy_by_field_type(field_type: Type):
@@ -63,13 +62,19 @@ def _strategy_by_field_type(field_type: Type):
 
 
 @composite
-def model(draw):
-    fields = draw(_model_fields)
+def model_type(draw):
+    fields = draw(dictionaries(python_identifier(), _field_type))
     model_type = type('Data', (faust.Record,), {'__annotations__': fields})
+    return model_type
+
+
+@composite
+def model(draw):
+    type_ = draw(model_type())
     model_args = {}
-    for field_name, field_type in fields.items():
+    for field_name, field_type in type_._options.fields.items():
         model_args[field_name] = draw(_strategy_by_field_type(field_type))
-    model = model_type(**model_args)
+    model = type_(**model_args)
     return model
 
 
