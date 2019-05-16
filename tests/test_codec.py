@@ -102,7 +102,13 @@ class Data(faust.Record, include_metadata=False):
     number: int
 
 
-def test_create_schema():
+@given(model(
+    fields=just([
+        ('id', str),
+        ('number', int)
+    ])
+))
+def test_create_schema(model):
     schema_definition = '''
         table Data {
             id:string;
@@ -111,7 +117,7 @@ def test_create_schema():
         root_type Data;'''
     schema = _create_schema(schema_definition)
     codec = FlatbuffersCodec.from_schema(schema)
-    model = Data(id='abcd', number=1234)
+    model._options.include_metadata = False
     data = model.to_representation()
 
     data_deserialized = codec.loads(codec.dumps(data))
