@@ -180,7 +180,7 @@ class Data(faust.Record, include_metadata=False):
 @settings(suppress_health_check=[HealthCheck.too_slow])
 @given(data())
 def test_deserialization_reverts_serialization_when_codec_is_created_from_schema(data):
-    table_ = data.draw(table(name=just('Data')))
+    table_ = data.draw(table())
     schema_definition = _to_schema_definition(table_)
 
     model_type = _to_faust_model_type(table_)
