@@ -5,7 +5,7 @@ import tempfile
 import types
 from keyword import iskeyword
 from pathlib import Path
-from typing import Any, Mapping, Sequence, Type
+from typing import Any, Mapping, NamedTuple, Sequence, Type
 
 import faust
 from hypothesis import assume, given, settings, HealthCheck
@@ -121,11 +121,16 @@ def _reference_deserialize(definition: str, data: bytes) -> Mapping[str, Any]:
             return json.load(f)
 
 
+class Field(NamedTuple):
+    name: str
+    type: Type
+
+
 @composite
 def field(draw):
     name = draw(text(alphabet=string.ascii_letters, min_size=1))
     type_ = draw(sampled_from(['string', 'int']))
-    return dict(name=name, type=type_)
+    return Field(name=name, type=type_)
 
 
 _model_field_type_by_flatbuffers_type = {
@@ -142,14 +147,14 @@ class Data(faust.Record, include_metadata=False):
 @settings(suppress_health_check=[HealthCheck.too_slow])
 @given(data())
 def test_deserialization_reverts_serialization_when_codec_is_created_from_schema(data):
-    fields = data.draw(lists(field(), unique_by=lambda f: f['name']))
+    fields = data.draw(lists(field(), unique_by=lambda f: f.name))
     schema_definition = 'table Data {'
     for f in fields:
-        schema_definition += f'{f["name"]}:{f["type"]};\n'
+        schema_definition += f'{f.name}:{f.type};\n'
     schema_definition += '}\n'
     schema_definition += 'root_type Data;'
 
-    model_fields = [(field['name'], _model_field_type_by_flatbuffers_type[field['type']]) for field in fields]
+    model_fields = [(f.name, _model_field_type_by_flatbuffers_type[f.type]) for f in fields]
     model_instance = data.draw(model(
         fields=just(model_fields),
         include_metadata=just(False)
