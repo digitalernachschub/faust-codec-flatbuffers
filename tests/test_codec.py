@@ -152,6 +152,15 @@ _model_field_type_by_flatbuffers_type = {
 }
 
 
+def _to_schema_definition(table: Table) -> str:
+    schema_definition = f'table {table.name} {{'
+    for f in table.fields:
+        schema_definition += f'{f.name}:{f.type};\n'
+    schema_definition += '}\n'
+    schema_definition += f'root_type {table.name};'
+    return schema_definition
+
+
 class Data(faust.Record, include_metadata=False):
     id: str
     number: int
@@ -161,11 +170,7 @@ class Data(faust.Record, include_metadata=False):
 @given(data())
 def test_deserialization_reverts_serialization_when_codec_is_created_from_schema(data):
     table_ = data.draw(table(name=just('Data')))
-    schema_definition = 'table Data {'
-    for f in table_.fields:
-        schema_definition += f'{f.name}:{f.type};\n'
-    schema_definition += '}\n'
-    schema_definition += 'root_type Data;'
+    schema_definition = _to_schema_definition(table_)
 
     model_fields = [(f.name, _model_field_type_by_flatbuffers_type[f.type]) for f in table_.fields]
     model_instance = data.draw(model(
