@@ -90,7 +90,7 @@ def model(draw, **kwargs):
     return model
 
 
-def _create_schema(definition: str) -> bytes:
+def _to_binary_schema(definition: str) -> bytes:
     with tempfile.TemporaryDirectory() as output_dir:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.fbs') as schema_definition_file:
             schema_definition_file.write(definition)
@@ -140,7 +140,7 @@ def test_deserialization_reverts_serialization_when_codec_is_created_from_schema
             number:int;
         }
         root_type Data;'''
-    schema = _create_schema(schema_definition)
+    schema = _to_binary_schema(schema_definition)
     codec = FlatbuffersCodec.from_schema(schema)
     data = model.to_representation()
 
