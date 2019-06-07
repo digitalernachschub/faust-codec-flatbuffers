@@ -5,9 +5,10 @@ import tempfile
 import types
 from keyword import iskeyword
 from pathlib import Path
-from typing import Any, Mapping, NamedTuple, Sequence, Type
+from typing import Any, Iterable, Mapping, NamedTuple, Sequence, Type, Union
 
 import faust
+import pytest
 from hypothesis import assume, given, settings, HealthCheck
 from hypothesis.strategies import binary, composite, data, floats, integers, just, lists, sampled_from, text
 
@@ -33,10 +34,11 @@ _strategies_by_field_type = {
     Int64: integers(min_value=-2**63, max_value=2**63-1),
     UInt64: integers(min_value=0, max_value=2**64-1),
     # NaN will break equality tests, because float('nan') != float('nan')
+    #
     # Infinity will break test_dumps and test_loads, because they feed flatc with json-encoded data and JSON
-    # doest not support NaN or Infinity values.
+    # does not support NaN or Infinity values.
     float: floats(width=32, allow_nan=False, allow_infinity=False),
-    Float64: floats(allow_nan=False, allow_infinity=False),
+    Float64: floats(width=64, allow_nan=False, allow_infinity=False),
 }
 
 
@@ -139,7 +141,7 @@ def _reference_deserialize(definition: str, data: bytes) -> Mapping[str, Any]:
             deserialized_data_paths = [str(f) for f in deserialized_data_files]
             raise ValueError('More than one Flatbuffers file found: ' + ', '.join(deserialized_data_paths))
         with open(str(deserialized_data_files[0]), 'r') as f:
-            return json.load(f)
+            return json.load(f, parse_float=lambda s: round(float(s), 6))
 
 
 class Field(NamedTuple):
@@ -247,7 +249,10 @@ def test_dumps(data):
     binary = codec.dumps(data_json)
 
     deserialized = _reference_deserialize(schema_definition, binary)
-    assert deserialized == data_json
+    # flatc must round the floats when converting to a JSON representation
+    # This means we are limited to 6 digits for float and 12 digits for double
+    # see https://github.com/google/flatbuffers/issues/5371
+    assert deserialized == approx(data_json)
 
 
 @settings(suppress_health_check=[HealthCheck.too_slow])
@@ -274,3 +279,16 @@ def test_loads(data):
     data_deserialized = codec.loads(serialized)
 
     assert data_deserialized == data_json
+
+
+def approx(value: Union[Any, Sequence[Any], Mapping[str, Any]], float_precision_abs=1e-6):
+    if isinstance(value, Mapping):
+        matcher = {k: approx(v) for k, v in value.items()}
+    elif isinstance(value, Iterable) and not isinstance(value, (str, bytes)):
+        matcher = [approx(v) for v in value]
+    else:
+        try:
+            matcher = pytest.approx(value, abs=float_precision_abs)
+        except:
+            matcher = value
+    return matcher
