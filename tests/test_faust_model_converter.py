@@ -7,6 +7,7 @@ from faust_codec_flatbuffers.faust_model_converter import to_flatbuffers_schema,
 from faust_codec_flatbuffers.reflection.BaseType import BaseType
 from faust_codec_flatbuffers.reflection.Field import Field as FlatbuffersField
 from faust_codec_flatbuffers.reflection.Schema import Schema
+from faust_codec_flatbuffers.reflection.Object import Object
 
 from tests import flatc
 from tests.test_codec import table, _to_faust_model_type, Table, Field, FlatbuffersIdlBaseType, _to_schema_definition
@@ -52,10 +53,13 @@ def test_schema_corresponds_to_reference():
 
     expected_schema = Schema.GetRootAsSchema(flatc.serialize_schema_definition(_to_schema_definition(table)), 0)
     assert schema.ObjectsLength() == expected_schema.ObjectsLength()
-    assert schema.Objects(0).FieldsLength() == expected_schema.Objects(0).FieldsLength()
-    assert schema.Objects(0).Name() == expected_schema.Objects(0).Name()
-    assert schema.Objects(0).Fields(0) == expected_schema.Objects(0).Fields(0)
-    assert schema.Objects(0).Fields(1) == expected_schema.Objects(0).Fields(1)
+    assert all([schema.Objects(object_index) == expected_schema.Objects(object_index) for object_index in range(schema.ObjectsLength())])
+
+
+def object_eq(self, other) -> bool:
+    return self.Name() == other.Name() and \
+        self.FieldsLength() == other.FieldsLength() and \
+        all([self.Fields(field_index) == other.Fields(field_index) for field_index in range(self.FieldsLength())])
 
 
 def field_eq(self, other):
@@ -64,4 +68,5 @@ def field_eq(self, other):
            self.Offset() == other.Offset()
 
 
+Object.__eq__ = object_eq
 FlatbuffersField.__eq__ = field_eq
