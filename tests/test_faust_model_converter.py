@@ -5,6 +5,7 @@ from hypothesis import given
 
 from faust_codec_flatbuffers.faust_model_converter import to_flatbuffers_schema, Float64, UInt8, Int8, UInt16, Int16, UInt32, Int64, UInt64
 from faust_codec_flatbuffers.reflection.BaseType import BaseType
+from faust_codec_flatbuffers.reflection.Field import Field as FlatbuffersField
 from faust_codec_flatbuffers.reflection.Schema import Schema
 
 from tests import flatc
@@ -53,7 +54,14 @@ def test_schema_corresponds_to_reference():
     assert schema.ObjectsLength() == expected_schema.ObjectsLength()
     assert schema.Objects(0).FieldsLength() == expected_schema.Objects(0).FieldsLength()
     assert schema.Objects(0).Name() == expected_schema.Objects(0).Name()
-    assert schema.Objects(0).Fields(0).Type().BaseType() == expected_schema.Objects(0).Fields(0).Type().BaseType()
-    assert schema.Objects(0).Fields(0).Name() == expected_schema.Objects(0).Fields(0).Name()
-    assert schema.Objects(0).Fields(0).Offset() == expected_schema.Objects(0).Fields(0).Offset()
-    assert schema.Objects(0).Fields(1).Offset() == expected_schema.Objects(0).Fields(1).Offset()
+    assert schema.Objects(0).Fields(0) == expected_schema.Objects(0).Fields(0)
+    assert schema.Objects(0).Fields(1) == expected_schema.Objects(0).Fields(1)
+
+
+def field_eq(self, other):
+    return self.Name() == other.Name() and \
+           self.Type().BaseType() == other.Type().BaseType() and \
+           self.Offset() == other.Offset()
+
+
+FlatbuffersField.__eq__ = field_eq
