@@ -42,8 +42,8 @@ def test_schema(model):
         assert expected_model_field_type == model_field_type
 
 
-def test_schema_corresponds_to_reference():
-    table = Table('Data', [Field('id', FlatbuffersIdlBaseType.STRING), Field('number', FlatbuffersIdlBaseType.INT)])
+@given(table=table())
+def test_schema_corresponds_to_reference(table):
     model = _to_faust_model_type(table)
 
     schema = to_flatbuffers_schema(model)
