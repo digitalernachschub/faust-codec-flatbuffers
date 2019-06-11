@@ -6,8 +6,9 @@ from hypothesis import given
 from faust_codec_flatbuffers.faust_model_converter import to_flatbuffers_schema, Float64, UInt8, Int8, UInt16, Int16, UInt32, Int64, UInt64
 from faust_codec_flatbuffers.reflection.BaseType import BaseType
 from faust_codec_flatbuffers.reflection.Field import Field as FlatbuffersField
-from faust_codec_flatbuffers.reflection.Schema import Schema
 from faust_codec_flatbuffers.reflection.Object import Object
+from faust_codec_flatbuffers.reflection.Schema import Schema
+from faust_codec_flatbuffers.reflection.Type import Type as FlatbuffersType
 
 from tests import flatc
 from tests.test_codec import table, _to_faust_model_type, Table, Field, FlatbuffersIdlBaseType, _to_schema_definition
@@ -66,12 +67,19 @@ def object_eq(self, other) -> bool:
         all([self.Fields(field_index) == other.Fields(field_index) for field_index in range(self.FieldsLength())])
 
 
-def field_eq(self, other):
+def field_eq(self: FlatbuffersField, other):
     return self.Name() == other.Name() and \
-           self.Type().BaseType() == other.Type().BaseType() and \
+           self.Type() == other.Type() and \
            self.Offset() == other.Offset()
+
+
+def type_eq(self: FlatbuffersType, other):
+    return self.BaseType() == other.BaseType() and \
+           self.Index() == other.Index() and \
+           self.Element() == other.Element()
 
 
 Schema.__eq__ = schema_eq
 Object.__eq__ = object_eq
 FlatbuffersField.__eq__ = field_eq
+FlatbuffersType.__eq__ = type_eq
