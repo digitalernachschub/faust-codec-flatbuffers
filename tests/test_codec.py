@@ -152,7 +152,7 @@ def _to_schema_definition(table: Table) -> flatc.SchemaDefinition:
     return flatc.SchemaDefinition(schema_definition)
 
 
-def _to_faust_model_type(table: Table) -> Type:
+def _to_faust_model_type(table: Table) -> Type[faust.Record]:
     fields = {f.name: _model_field_type_by_flatbuffers_type[f.type] for f in table.fields}
     model_type = types.new_class(
         table.name,
