@@ -7,7 +7,7 @@ from faust_codec_flatbuffers.reflection.BaseType import BaseType
 from faust_codec_flatbuffers.reflection.Schema import Schema
 
 from tests import flatc
-from tests.test_codec import table, _to_faust_model_type, Table, Field, FlatbuffersIdlBaseType, _to_schema_definition
+from tests.test_codec import table, _to_faust_model_type, _to_schema_definition
 
 
 _faust_model_type_by_flatbuffers_type: Mapping[BaseType, Type] = {
