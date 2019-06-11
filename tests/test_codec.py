@@ -1,10 +1,6 @@
-import json
 import string
-import subprocess
-import tempfile
 import types
 from keyword import iskeyword
-from pathlib import Path
 from typing import Any, Iterable, Mapping, NamedTuple, Sequence, Type, Union
 
 import faust
@@ -14,6 +10,7 @@ from hypothesis.strategies import binary, composite, data, floats, integers, jus
 
 from faust_codec_flatbuffers.codec import FlatbuffersCodec
 from faust_codec_flatbuffers.faust_model_converter import Float64, UInt8, Int8, UInt16, Int16, UInt32, Int64, UInt64
+from tests import flatc
 
 
 @composite
@@ -92,56 +89,6 @@ def model(draw, model_class=model_type()):
         model_args[field_name] = draw(_strategy_by_field_type(field_type))
     model = type_(**model_args)
     return model
-
-
-def _to_binary_schema(definition: str) -> bytes:
-    with tempfile.TemporaryDirectory() as output_dir:
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.fbs') as schema_definition_file:
-            schema_definition_file.write(definition)
-            schema_definition_file.flush()
-            subprocess.run(['flatc', '--schema', '--binary', '-o', output_dir, schema_definition_file.name], check=True)
-        binary_schema_files = list(Path(output_dir).glob('**/*.bfbs'))
-        if len(binary_schema_files) > 1:
-            binary_schema_paths = [str(f) for f in binary_schema_files]
-            raise ValueError('More than one Flatbuffers binary schema found: ' + ', '.join(binary_schema_paths))
-        with open(str(binary_schema_files[0]), 'rb') as f:
-            return f.read()
-
-
-def _reference_serialize(definition: str, data: Mapping[str, Any]) -> bytes:
-    with tempfile.TemporaryDirectory() as output_dir:
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.fbs') as schema_definition_file:
-            schema_definition_file.write(definition)
-            schema_definition_file.flush()
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as data_file:
-                json.dump(data, data_file)
-                data_file.flush()
-                subprocess.run(['flatc', '--binary', '--raw-binary',
-                                '-o', output_dir, schema_definition_file.name, data_file.name], check=True)
-        serialized_data_files = list(Path(output_dir).glob('**/*.bin'))
-        if len(serialized_data_files) > 1:
-            serialized_data_paths = [str(f) for f in serialized_data_files]
-            raise ValueError('More than one Flatbuffers file found: ' + ', '.join(serialized_data_paths))
-        with open(str(serialized_data_files[0]), 'rb') as f:
-            return f.read()
-
-
-def _reference_deserialize(definition: str, data: bytes) -> Mapping[str, Any]:
-    with tempfile.TemporaryDirectory() as output_dir:
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.fbs') as schema_definition_file:
-            schema_definition_file.write(definition)
-            schema_definition_file.flush()
-            with tempfile.NamedTemporaryFile(mode='wb', suffix='.bin') as data_file:
-                data_file.write(data)
-                data_file.flush()
-                subprocess.run(['flatc', '--json', '--strict-json', '--defaults-json', '--raw-binary',
-                                '-o', output_dir, schema_definition_file.name, '--', data_file.name], check=True)
-        deserialized_data_files = list(Path(output_dir).glob('**/*.json'))
-        if len(deserialized_data_files) > 1:
-            deserialized_data_paths = [str(f) for f in deserialized_data_files]
-            raise ValueError('More than one Flatbuffers file found: ' + ', '.join(deserialized_data_paths))
-        with open(str(deserialized_data_files[0]), 'r') as f:
-            return json.load(f, parse_float=lambda s: round(float(s), 6))
 
 
 _model_field_type_by_flatbuffers_type = {
@@ -224,7 +171,7 @@ def test_deserialization_reverts_serialization_when_codec_is_created_from_schema
 
     model_type = _to_faust_model_type(table_)
     model_instance = data.draw(model(model_class=just(model_type)))
-    schema = _to_binary_schema(schema_definition)
+    schema = flatc._to_binary_schema(schema_definition)
     codec = FlatbuffersCodec.from_schema(schema)
     data = model_instance.to_representation()
 
@@ -244,7 +191,7 @@ def test_dumps(data):
 
     binary = codec.dumps(data_json)
 
-    deserialized = _reference_deserialize(schema_definition, binary)
+    deserialized = flatc._reference_deserialize(schema_definition, binary)
     # flatc must round the floats when converting to a JSON representation
     # This means we are limited to 6 digits for float and 12 digits for double
     # see https://github.com/google/flatbuffers/issues/5371
@@ -259,7 +206,7 @@ def test_loads(data):
     model_instance = data.draw(model(model_class=just(model_type)))
     codec = FlatbuffersCodec.from_model(model_type)
     data_json = model_instance.to_representation()
-    serialized = _reference_serialize(schema_definition, data_json)
+    serialized = flatc._reference_serialize(schema_definition, data_json)
 
     data_deserialized = codec.loads(serialized)
 
