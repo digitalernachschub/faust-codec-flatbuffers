@@ -68,9 +68,13 @@ def object_eq(self, other) -> bool:
 
 
 def field_eq(self: FlatbuffersField, other):
+    # TODO: Check attributes for equality
+    # TODO: Check documentation for equality
     return self.Name() == other.Name() and \
            self.Type() == other.Type() and \
-           self.Offset() == other.Offset()
+           self.Offset() == other.Offset() and \
+           self.AttributesLength() == other.AttributesLength() and \
+           self.DocumentationLength() == other.DocumentationLength()
 
 
 def type_eq(self: FlatbuffersType, other):
