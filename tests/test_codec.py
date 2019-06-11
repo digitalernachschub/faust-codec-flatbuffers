@@ -1,3 +1,4 @@
+import enum
 import string
 import types
 from keyword import iskeyword
@@ -91,35 +92,59 @@ def model(draw, model_class=model_type()):
     return model
 
 
+class FlatbuffersIdlBaseType(enum.Enum):
+    STRING = 'string'
+    BYTE = 'byte'
+    UBYTE = 'ubyte'
+    SHORT = 'short'
+    USHORT = 'ushort'
+    INT = 'int'
+    UINT = 'uint'
+    LONG = 'long'
+    ULONG = 'ulong'
+    INT8 = 'int8'
+    UINT8 = 'uint8'
+    INT16 = 'int16'
+    UINT16 = 'uint16'
+    INT32 = 'int32'
+    UINT32 = 'uint32'
+    INT64 = 'int64'
+    UINT64 = 'uint64'
+    FLOAT = 'float'
+    FLOAT32 = 'float32'
+    FLOAT64 = 'float64'
+    DOUBLE = 'double'
+
+
 _model_field_type_by_flatbuffers_type = {
-    'string': str,
-    'byte': Int8,
-    'ubyte': UInt8,
-    'short': Int16,
-    'ushort': UInt16,
-    'int': int,
-    'uint': UInt32,
-    'long': Int64,
-    'ulong': UInt64,
-    'int8': Int8,
-    'uint8': UInt8,
-    'int16': Int16,
-    'uint16': UInt16,
-    'int32': int,
-    'uint32': UInt32,
-    'int64': Int64,
-    'uint64': UInt64,
-    'float': float,
-    'float32': float,
-    'float64': Float64,
-    'double': Float64,
+    FlatbuffersIdlBaseType.STRING: str,
+    FlatbuffersIdlBaseType.BYTE: Int8,
+    FlatbuffersIdlBaseType.UBYTE: UInt8,
+    FlatbuffersIdlBaseType.SHORT: Int16,
+    FlatbuffersIdlBaseType.USHORT: UInt16,
+    FlatbuffersIdlBaseType.INT: int,
+    FlatbuffersIdlBaseType.UINT: UInt32,
+    FlatbuffersIdlBaseType.LONG: Int64,
+    FlatbuffersIdlBaseType.ULONG: UInt64,
+    FlatbuffersIdlBaseType.INT8: Int8,
+    FlatbuffersIdlBaseType.UINT8: UInt8,
+    FlatbuffersIdlBaseType.INT16: Int16,
+    FlatbuffersIdlBaseType.UINT16: UInt16,
+    FlatbuffersIdlBaseType.INT32: int,
+    FlatbuffersIdlBaseType.UINT32: UInt32,
+    FlatbuffersIdlBaseType.INT64: Int64,
+    FlatbuffersIdlBaseType.UINT64: UInt64,
+    FlatbuffersIdlBaseType.FLOAT: float,
+    FlatbuffersIdlBaseType.FLOAT32: float,
+    FlatbuffersIdlBaseType.FLOAT64: Float64,
+    FlatbuffersIdlBaseType.DOUBLE: Float64,
 }
 _flatbuffers_primitive_types = list(_model_field_type_by_flatbuffers_type.keys())
 
 
 class Field(NamedTuple):
     name: str
-    type: Type
+    type: FlatbuffersIdlBaseType
 
 
 class Table(NamedTuple):
@@ -146,7 +171,7 @@ def table(draw, name=python_identifier()):
 def _to_schema_definition(table: Table) -> flatc.SchemaDefinition:
     schema_definition = f'table {table.name} {{'
     for f in table.fields:
-        schema_definition += f'{f.name}:{f.type};\n'
+        schema_definition += f'{f.name}:{f.type.value};\n'
     schema_definition += '}\n'
     schema_definition += f'root_type {table.name};'
     return flatc.SchemaDefinition(schema_definition)
