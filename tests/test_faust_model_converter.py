@@ -7,7 +7,7 @@ from faust_codec_flatbuffers.faust_model_converter import to_flatbuffers_schema,
 from faust_codec_flatbuffers.reflection.BaseType import BaseType
 from faust_codec_flatbuffers.reflection.Schema import Schema
 
-from tests.test_codec import table, _to_faust_model_type
+from tests.test_codec import table, _to_faust_model_type, Table, Field
 
 
 class Data(faust.Record):
@@ -48,7 +48,8 @@ def test_schema(model):
 
 
 def test_schema_corresponds_to_reference():
-    model = Data
+    table = Table('Data', [Field('id', 'string'), Field('number', 'int')])
+    model = _to_faust_model_type(table)
 
     schema = to_flatbuffers_schema(model)
 
