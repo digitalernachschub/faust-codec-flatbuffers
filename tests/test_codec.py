@@ -171,7 +171,7 @@ def test_deserialization_reverts_serialization_when_codec_is_created_from_schema
 
     model_type = _to_faust_model_type(table_)
     model_instance = data.draw(model(model_class=just(model_type)))
-    schema = flatc.serialize(flatc.SchemaDefinition(schema_definition))
+    schema = flatc.serialize_schema_definition(flatc.SchemaDefinition(schema_definition))
     codec = FlatbuffersCodec.from_schema(schema)
     data = model_instance.to_representation()
 
@@ -191,7 +191,7 @@ def test_dumps(data):
 
     binary = codec.dumps(data_json)
 
-    deserialized = flatc._reference_deserialize(schema_definition, binary)
+    deserialized = flatc.deserialize(flatc.SchemaDefinition(schema_definition), binary)
     # flatc must round the floats when converting to a JSON representation
     # This means we are limited to 6 digits for float and 12 digits for double
     # see https://github.com/google/flatbuffers/issues/5371
@@ -206,7 +206,7 @@ def test_loads(data):
     model_instance = data.draw(model(model_class=just(model_type)))
     codec = FlatbuffersCodec.from_model(model_type)
     data_json = model_instance.to_representation()
-    serialized = flatc._reference_serialize(schema_definition, data_json)
+    serialized = flatc.serialize(flatc.SchemaDefinition(schema_definition), data_json)
 
     data_deserialized = codec.loads(serialized)
 

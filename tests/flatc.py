@@ -8,7 +8,7 @@ from typing import Any, Mapping, NewType
 SchemaDefinition = NewType('SchemaDefinition', str)
 
 
-def serialize(definition: SchemaDefinition) -> bytes:
+def serialize_schema_definition(definition: SchemaDefinition) -> bytes:
     with tempfile.TemporaryDirectory() as output_dir:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.fbs') as schema_definition_file:
             schema_definition_file.write(definition)
@@ -22,7 +22,7 @@ def serialize(definition: SchemaDefinition) -> bytes:
             return f.read()
 
 
-def _reference_serialize(definition: str, data: Mapping[str, Any]) -> bytes:
+def serialize(definition: SchemaDefinition, data: Mapping[str, Any]) -> bytes:
     with tempfile.TemporaryDirectory() as output_dir:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.fbs') as schema_definition_file:
             schema_definition_file.write(definition)
@@ -40,7 +40,7 @@ def _reference_serialize(definition: str, data: Mapping[str, Any]) -> bytes:
             return f.read()
 
 
-def _reference_deserialize(definition: str, data: bytes) -> Mapping[str, Any]:
+def deserialize(definition: SchemaDefinition, data: bytes) -> Mapping[str, Any]:
     with tempfile.TemporaryDirectory() as output_dir:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.fbs') as schema_definition_file:
             schema_definition_file.write(definition)
