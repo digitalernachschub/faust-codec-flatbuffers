@@ -52,8 +52,12 @@ def test_schema_corresponds_to_reference():
     schema = to_flatbuffers_schema(model)
 
     expected_schema = Schema.GetRootAsSchema(flatc.serialize_schema_definition(_to_schema_definition(table)), 0)
-    assert schema.ObjectsLength() == expected_schema.ObjectsLength()
-    assert all([schema.Objects(object_index) == expected_schema.Objects(object_index) for object_index in range(schema.ObjectsLength())])
+    assert schema == expected_schema
+
+
+def schema_eq(self, other) -> bool:
+    return self.ObjectsLength() == other.ObjectsLength() and \
+           all([self.Objects(object_index) == other.Objects(object_index) for object_index in range(self.ObjectsLength())])
 
 
 def object_eq(self, other) -> bool:
@@ -68,5 +72,6 @@ def field_eq(self, other):
            self.Offset() == other.Offset()
 
 
+Schema.__eq__ = schema_eq
 Object.__eq__ = object_eq
 FlatbuffersField.__eq__ = field_eq
