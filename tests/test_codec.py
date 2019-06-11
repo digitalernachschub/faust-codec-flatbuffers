@@ -139,7 +139,6 @@ _model_field_type_by_flatbuffers_type = {
     FlatbuffersIdlBaseType.FLOAT64: Float64,
     FlatbuffersIdlBaseType.DOUBLE: Float64,
 }
-_flatbuffers_primitive_types = list(_model_field_type_by_flatbuffers_type.keys())
 
 
 class Field(NamedTuple):
@@ -155,7 +154,7 @@ class Table(NamedTuple):
 @composite
 def field(draw):
     name = draw(python_identifier())
-    type_ = draw(sampled_from(_flatbuffers_primitive_types))
+    type_ = draw(sampled_from(FlatbuffersIdlBaseType))
     return Field(name=name, type=type_)
 
 
