@@ -171,7 +171,7 @@ def test_deserialization_reverts_serialization_when_codec_is_created_from_schema
 
     model_type = _to_faust_model_type(table_)
     model_instance = data.draw(model(model_class=just(model_type)))
-    schema = flatc._to_binary_schema(schema_definition)
+    schema = flatc.serialize(flatc.SchemaDefinition(schema_definition))
     codec = FlatbuffersCodec.from_schema(schema)
     data = model_instance.to_representation()
 

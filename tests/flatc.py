@@ -2,10 +2,13 @@ import json
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Mapping, Any
+from typing import Any, Mapping, NewType
 
 
-def _to_binary_schema(definition: str) -> bytes:
+SchemaDefinition = NewType('SchemaDefinition', str)
+
+
+def serialize(definition: SchemaDefinition) -> bytes:
     with tempfile.TemporaryDirectory() as output_dir:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.fbs') as schema_definition_file:
             schema_definition_file.write(definition)
