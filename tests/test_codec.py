@@ -251,17 +251,6 @@ def test_dumps(data):
     assert deserialized == approx(data_json)
 
 
-@settings(suppress_health_check=[HealthCheck.too_slow])
-@given(model())
-def test_deserialization_reverts_serialization(model):
-    codec = FlatbuffersCodec.from_model(type(model))
-    data = model.to_representation()
-
-    data_deserialized = codec.loads(codec.dumps(data))
-
-    assert data_deserialized == data
-
-
 @given(data())
 def test_loads(data):
     table_ = data.draw(table())
