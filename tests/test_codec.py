@@ -216,11 +216,6 @@ def _to_faust_model_type(table: Table) -> Type:
     return model_type
 
 
-class Data(faust.Record, include_metadata=False):
-    id: str
-    number: int
-
-
 @settings(suppress_health_check=[HealthCheck.too_slow])
 @given(data())
 def test_deserialization_reverts_serialization_when_codec_is_created_from_schema(data):
