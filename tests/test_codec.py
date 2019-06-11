@@ -144,32 +144,6 @@ def _reference_deserialize(definition: str, data: bytes) -> Mapping[str, Any]:
             return json.load(f, parse_float=lambda s: round(float(s), 6))
 
 
-class Field(NamedTuple):
-    name: str
-    type: Type
-
-
-class Table(NamedTuple):
-    name: str
-    fields: Sequence[Field]
-
-
-@composite
-def field(draw):
-    name = draw(python_identifier())
-    type_ = draw(sampled_from(list(_model_field_type_by_flatbuffers_type.keys())))
-    return Field(name=name, type=type_)
-
-
-@composite
-def table(draw, name=python_identifier()):
-    name_ = draw(name)
-    fields_ = draw(lists(field(), unique_by=lambda f: f.name))
-    # Fields with the same name as the table are not allowed
-    assume(all(f.name != name_ for f in fields_))
-    return Table(name=name_, fields=fields_)
-
-
 _model_field_type_by_flatbuffers_type = {
     'string': str,
     'byte': Int8,
@@ -193,6 +167,33 @@ _model_field_type_by_flatbuffers_type = {
     'float64': Float64,
     'double': Float64,
 }
+_flatbuffers_primitive_types = list(_model_field_type_by_flatbuffers_type.keys())
+
+
+class Field(NamedTuple):
+    name: str
+    type: Type
+
+
+class Table(NamedTuple):
+    name: str
+    fields: Sequence[Field]
+
+
+@composite
+def field(draw):
+    name = draw(python_identifier())
+    type_ = draw(sampled_from(_flatbuffers_primitive_types))
+    return Field(name=name, type=type_)
+
+
+@composite
+def table(draw, name=python_identifier()):
+    name_ = draw(name)
+    fields_ = draw(lists(field(), unique_by=lambda f: f.name))
+    # Fields with the same name as the table are not allowed
+    assume(all(f.name != name_ for f in fields_))
+    return Table(name=name_, fields=fields_)
 
 
 def _to_schema_definition(table: Table) -> str:
