@@ -10,11 +10,6 @@ from faust_codec_flatbuffers.reflection.Schema import Schema
 from tests.test_codec import table, _to_faust_model_type, Table, Field
 
 
-class Data(faust.Record):
-    id: str
-    number: int
-
-
 _faust_model_type_by_flatbuffers_type: Mapping[BaseType, Type] = {
     BaseType.UByte: UInt8,
     BaseType.Byte: Int8,
