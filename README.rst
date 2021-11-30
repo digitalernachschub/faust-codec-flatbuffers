@@ -1,3 +1,5 @@
+**The Faust project is no longer active. This project has been archived.**
+
 |build-status| |coverage|
 
 This package is a plugin for the stream processing framework `Faust`_. It provides a codec to serialize and deserialize Faust models using `Flatbuffers`_.
